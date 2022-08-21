@@ -8,12 +8,8 @@ else
     source .venv/Scripts/activate
 fi
 
-if [[ $(uname -v) == *"Ubuntu"* && -n "$CI" ]]; then
-    python -m pip install --no-cache-dir -U pip
-fi
-
 python -m pip install -r requirements.txt
 
 python main.py
 
-deactive
+deactivate
