@@ -10,6 +10,4 @@ fi
 
 python -m pip install -r requirements.txt
 
-python main.py
-
-deactivate
+python main.py && deactivate
