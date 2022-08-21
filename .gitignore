@@ -1,0 +1,22 @@
+# stupid system files
+.DS_Store
+
+# emacs files
+*~
+.\#*
+\#*\#
+
+# python env
+.env
+env
+.venv
+
+# python
+__pycache__
+
+kaikki.*.json
+*tar.gz
+wiktionary_*.json
+wiktionary_*_tst_*
+wiktionary_*_dump_*
+kindle_lemmas_dump_*
