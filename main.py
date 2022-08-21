@@ -35,7 +35,7 @@ def main():
                 with open(f"{lang}/difficulty.json") as f:
                     difficulty_data = json.load(f)
         else:
-            with open("en/lemmas.json") as f:
+            with open("en/kindle_lemmas.json", encoding="utf-8") as f:
                 difficulty_data = {
                     lemma: values[0] for lemma, values in json.load(f).items()
                 }
