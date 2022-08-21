@@ -34,7 +34,12 @@ def download_kaikki_json(lang: str, kaikki_lang: str) -> Path:
     filepath = Path(f"{lang}/{filename}")
     if not filepath.exists():
         subprocess.run(
-            ["wget", f"https://kaikki.org/dictionary/{kaikki_lang}/{filename}"],
+            [
+                "wget",
+                "-P",
+                lang,
+                f"https://kaikki.org/dictionary/{kaikki_lang}/{filename}",
+            ],
             check=True,
             capture_output=True,
             text=True,
