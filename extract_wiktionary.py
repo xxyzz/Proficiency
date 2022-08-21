@@ -137,11 +137,11 @@ def extract_wiktionary(
             lemmas_row.append((lemma, row))
             added_lemmas.add(lemma)
     lemmas_tst.put_values(lemmas_row)
-    tst_filename = f"{lang}/wiktionary_{lang}_tst_{VERSION}"
+    tst_filename = f"{lang}/wiktionary_{lang}_tst_v{VERSION}"
     with open(tst_filename, "wb") as f:
         pickle.dump(lemmas_tst, f)
 
-    wiktionary_json_filename = f"{lang}/wiktionary_{lang}_{VERSION}.json"
+    wiktionary_json_filename = f"{lang}/wiktionary_{lang}_v{VERSION}.json"
     with open(wiktionary_json_filename, "w", encoding="utf-8") as f:
         json.dump(words, f)
     return [Path(wiktionary_json_filename), Path(tst_filename)]

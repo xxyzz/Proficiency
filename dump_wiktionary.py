@@ -23,10 +23,7 @@ def get_ipa(lang, ipas):
         return ipas
 
 
-def dump_wiktionary(json_path, dump_path, lang, notif):
-    if notif:
-        notif.put((0, "Converting Wiktionary file"))
-
+def dump_wiktionary(json_path, dump_path, lang):
     with open(json_path, encoding="utf-8") as f:
         words = json.load(f)
 

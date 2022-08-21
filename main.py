@@ -8,17 +8,17 @@ from dump_wiktionary import dump_wiktionary
 from extract_wiktionary import download_kaikki_json, extract_wiktionary
 from en.dump_kindle_lemmas import dump_kindle_lemmas
 
-VERSION = "0.0.1"
+VERSION = "0.0.0"
 
 
 def compress(lang: str, files: list[Path]) -> None:
-    with tarfile.open(f"{lang}/wiktionary_{lang}_{VERSION}.tar.gz", "x:gz") as tar:
+    with tarfile.open(f"{lang}/wiktionary_{lang}_v{VERSION}.tar.gz", "x:gz") as tar:
         for wiktionary_file in files:
             tar.add(wiktionary_file)
 
 
 def main():
-    with open("kaikki_languages.json") as f:
+    with open("kaikki_languages.json", encoding="utf-8") as f:
         languages = json.load(f)
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -32,7 +32,7 @@ def main():
             difficulty_json_path = Path(f"{lang}/difficulty.json")
             difficulty_data = {}
             if difficulty_json_path.exists():
-                with open(f"{lang}/difficulty.json") as f:
+                with open(f"{lang}/difficulty.json", encoding="utf-8") as f:
                     difficulty_data = json.load(f)
         else:
             with open("en/kindle_lemmas.json", encoding="utf-8") as f:
@@ -42,9 +42,9 @@ def main():
         wiktionary_json_path, tst_path = extract_wiktionary(
             lang, kaikki_path, difficulty_data
         )
-        wiktioanry_dump_path = Path(f"{lang}/wiktionary_{lang}_dump_{VERSION}")
+        wiktioanry_dump_path = Path(f"{lang}/wiktionary_{lang}_dump_v{VERSION}")
         print(f"Dumping {lang} Wiktionary file.")
-        dump_wiktionary(wiktionary_json_path, wiktioanry_dump_path, lang, None)
+        dump_wiktionary(wiktionary_json_path, wiktioanry_dump_path, lang)
         print(f"Compressing {lang} files.")
         compress(lang, [wiktionary_json_path, tst_path, wiktioanry_dump_path])
 

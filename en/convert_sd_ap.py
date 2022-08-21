@@ -33,7 +33,7 @@ def sd_ap_to_difficulty(sd_ap: float) -> int:
 
 words_dict = {}
 simple_words = set()
-with open(args.csv_path, newline="") as f:
+with open(args.csv_path, newline="", encoding="utf-8") as f:
     for row in csv.reader(f):
         word = row[0]
         sd_ap = row[-1]

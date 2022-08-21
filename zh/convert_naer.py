@@ -27,7 +27,7 @@ def main():
     args = parser.parse_args()
 
     words = {}
-    with open(args.csv_path, newline="") as csvfile:
+    with open(args.csv_path, newline="", encoding="utf-8") as csvfile:
         first_row = True
         for row in csv.reader(csvfile):
             if first_row:
