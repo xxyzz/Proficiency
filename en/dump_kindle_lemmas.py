@@ -38,11 +38,8 @@ def add_lemma(lemma, pos, data, keyword_processor):
             keyword_processor.add_keyword(inflection, data)
 
 
-def dump_kindle_lemmas(version):
+def dump_kindle_lemmas(lemmas, dump_path):
     from flashtext import KeywordProcessor
-
-    with open("lemmas.json", encoding="utf-8") as f:
-        lemmas = json.load(f)
 
     keyword_processor = KeywordProcessor()
     for lemma, (difficulty, sense_id, pos) in lemmas.items():
@@ -59,5 +56,5 @@ def dump_kindle_lemmas(version):
         else:
             add_lemma(lemma, pos, data, keyword_processor)
 
-    with open(f"kindle_lemmas_dump_{version}", "wb") as f:
+    with open(dump_path, "wb") as f:
         pickle.dump(keyword_processor, f)

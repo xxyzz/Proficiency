@@ -50,7 +50,9 @@ def main():
 
     if "en" in args.languages:
         print("Dumping Kindle lemmas.")
-        dump_kindle_lemmas(VERSION)
+        with open("en/kindle_lemmas.json", encoding="utf-8") as f:
+            lemmas = json.load(f)
+            dump_kindle_lemmas(lemmas, f"en/kindle_lemmas_dump_v{VERSION}")
 
 
 if __name__ == "__main__":
