@@ -37,6 +37,7 @@ def download_kaikki_json(lang: str, kaikki_lang: str, retry=5) -> Path:
         r = subprocess.run(
             [
                 "wget",
+                "-nv",
                 "-P",
                 lang,
                 f"https://kaikki.org/dictionary/{kaikki_lang}/{filename}",
