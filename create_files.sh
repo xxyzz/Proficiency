@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bash -e
 
 if [[ "$OSTYPE" != "msys" ]]; then
     python3 -m venv .venv
@@ -10,4 +10,6 @@ fi
 
 python -m pip install -r requirements.txt
 
-python main.py && deactivate
+python main.py
+
+deactivate

@@ -19,7 +19,7 @@ jobs:
           cache: 'pip'
 
       - name: Create files
-        run: bash ./create_files.sh
+        run: bash -e ./create_files.sh
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
