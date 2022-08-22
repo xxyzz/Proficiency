@@ -9,7 +9,7 @@ from dump_wiktionary import dump_wiktionary
 from en.dump_kindle_lemmas import dump_kindle_lemmas
 from extract_wiktionary import download_kaikki_json, extract_wiktionary
 
-VERSION = "0.0.1"
+VERSION = "0.1.0"
 MAJOR_VERSION = "0"
 
 
