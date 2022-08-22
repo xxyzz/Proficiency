@@ -9,6 +9,7 @@ from en.dump_kindle_lemmas import dump_kindle_lemmas
 from extract_wiktionary import download_kaikki_json, extract_wiktionary
 
 VERSION = "0.0.0"
+MAJOR_VERSION = "0"
 
 
 def compress(lang: str, files: list[Path]) -> None:
@@ -42,7 +43,7 @@ def main():
         wiktionary_json_path, tst_path = extract_wiktionary(
             lang, kaikki_path, difficulty_data
         )
-        wiktioanry_dump_path = Path(f"{lang}/wiktionary_{lang}_dump_v{VERSION}")
+        wiktioanry_dump_path = Path(f"{lang}/wiktionary_{lang}_dump_v{MAJOR_VERSION}")
         print(f"Dumping {lang} Wiktionary file.")
         dump_wiktionary(wiktionary_json_path, wiktioanry_dump_path, lang)
         print(f"Compressing {lang} files.")
@@ -52,7 +53,7 @@ def main():
         print("Dumping Kindle lemmas.")
         with open("en/kindle_lemmas.json", encoding="utf-8") as f:
             lemmas = json.load(f)
-            dump_kindle_lemmas(lemmas, f"en/kindle_lemmas_dump_v{VERSION}")
+            dump_kindle_lemmas(lemmas, f"en/kindle_lemmas_dump_v{MAJOR_VERSION}")
 
 
 if __name__ == "__main__":

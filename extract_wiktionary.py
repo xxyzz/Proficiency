@@ -55,7 +55,7 @@ def download_kaikki_json(lang: str, kaikki_lang: str, retry=5) -> Path:
 def extract_wiktionary(
     lang: str, kaikki_path: Path, difficulty_data: dict[str, int]
 ) -> list[Path]:
-    from main import VERSION
+    from main import MAJOR_VERSION
 
     print(f"Extracting {lang} Wiktionary JSON file")
     words = []
@@ -147,11 +147,11 @@ def extract_wiktionary(
             lemmas_row.append((lemma, row))
             added_lemmas.add(lemma)
     lemmas_tst.put_values(lemmas_row)
-    tst_filename = f"{lang}/wiktionary_{lang}_tst_v{VERSION}"
+    tst_filename = f"{lang}/wiktionary_{lang}_tst_v{MAJOR_VERSION}"
     with open(tst_filename, "wb") as f:
         pickle.dump(lemmas_tst, f)
 
-    wiktionary_json_filename = f"{lang}/wiktionary_{lang}_v{VERSION}.json"
+    wiktionary_json_filename = f"{lang}/wiktionary_{lang}_v{MAJOR_VERSION}.json"
     with open(wiktionary_json_filename, "w", encoding="utf-8") as f:
         json.dump(words, f)
     return [Path(wiktionary_json_filename), Path(tst_filename)]
