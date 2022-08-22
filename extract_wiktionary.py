@@ -57,7 +57,6 @@ def extract_wiktionary(
 ) -> list[Path]:
     from main import MAJOR_VERSION
 
-    print(f"Extracting {lang} Wiktionary JSON file")
     words = []
     enabled_words_pos = set()
     len_limit = 2 if lang in CJK_LANGS else 3
