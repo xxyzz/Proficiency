@@ -10,12 +10,14 @@ Language files for [WordDumb](https://github.com/xxyzz/WordDumb).
 
 - [FlashText](https://github.com/vi3k6i5/flashtext): for other languages
 
+- [lemminflect](https://github.com/bjascob/LemmInflect): inflect English words
+
 - [Open Chinese Convert](https://github.com/BYVoid/OpenCC): convert Chinese characters
 
 ## Create files
 
 ```
-$ bash ./create_files.sh
+$ bash -e ./create_files.sh
 ```
 
 ## License

@@ -1,5 +1,4 @@
 import json
-import logging
 import pickle
 import re
 import subprocess
@@ -29,12 +28,12 @@ CJK_LANGS = ["zh", "ja", "ko"]
 POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
 
 
-def download_kaikki_json(lang: str, kaikki_lang: str, retry=5) -> Path:
+def download_kaikki_json(lang: str, kaikki_lang: str) -> Path:
     filename_lang = re.sub(r"[\s-]", "", kaikki_lang)
     filename = f"kaikki.org-dictionary-{filename_lang}.json"
     filepath = Path(f"{lang}/{filename}")
-    if not filepath.exists() and retry:
-        r = subprocess.run(
+    if not filepath.exists():
+        subprocess.run(
             [
                 "wget",
                 "-nv",
@@ -42,12 +41,10 @@ def download_kaikki_json(lang: str, kaikki_lang: str, retry=5) -> Path:
                 lang,
                 f"https://kaikki.org/dictionary/{kaikki_lang}/{filename}",
             ],
+            check=True,
             capture_output=True,
             text=True,
         )
-        if r.stderr:
-            logging.error(r.stderr)
-            download_kaikki_json(lang, kaikki_lang, retry - 1)
 
     return filepath
 
