@@ -17,7 +17,7 @@ Language files for [WordDumb](https://github.com/xxyzz/WordDumb).
 ## Create files
 
 ```
-$ bash -e ./create_files.sh
+$ bash ./create_files.sh en
 ```
 
 ## License
