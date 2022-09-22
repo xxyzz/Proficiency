@@ -3,15 +3,19 @@
 set -e
 
 if [[ "$OSTYPE" != "msys" ]]; then
-    python3 -m venv .venv
+    if [[ ! -d .venv ]]; then
+        python3 -m venv .venv
+    fi
     source .venv/bin/activate
 else
-    py -m venv .venv
+    if [[ ! -d .venv ]]; then
+        py -m venv .venv
+    fi
     source .venv/Scripts/activate
 fi
 
 python -m pip install -r requirements.txt
 
-python main.py
+python main.py $1
 
 deactivate

@@ -50,14 +50,14 @@ def download_kaikki_json(lang: str, kaikki_lang: str) -> Path:
 
 
 def extract_wiktionary(
-    lang: str, kaikki_path: Path, difficulty_data: dict[str, int]
+    lemma_lang: str, gloss_lang: str, kaikki_path: Path, difficulty_data: dict[str, int]
 ) -> list[Path]:
     from main import MAJOR_VERSION
 
     words = []
     enabled_words_pos = set()
-    len_limit = 2 if lang in CJK_LANGS else 3
-    if lang == "zh":
+    len_limit = 2 if lemma_lang in CJK_LANGS else 3
+    if lemma_lang == "zh":
         converter = opencc.OpenCC("t2s.json")
 
     with open(kaikki_path, encoding="utf-8") as f:
@@ -71,7 +71,7 @@ def extract_wiktionary(
                 or re.match(r"\W|\d", word)
             ):
                 continue
-            if lang in CJK_LANGS and re.fullmatch(r"[a-zA-Z\d]+", word):
+            if lemma_lang in CJK_LANGS and re.fullmatch(r"[a-zA-Z\d]+", word):
                 continue
 
             word_pos = f"{word} {pos}"
@@ -90,7 +90,7 @@ def extract_wiktionary(
             for form in map(lambda x: x.get("form"), data.get("forms", [])):
                 if form and form != word and len(form) >= len_limit:
                     forms.add(form)
-            if lang == "zh":
+            if lemma_lang == "zh":
                 simplified_form = converter.convert(word)
                 if simplified_form != word:
                     forms.add(simplified_form)
@@ -105,7 +105,11 @@ def extract_wiktionary(
                     gloss = glosses[1]
                 else:
                     gloss = glosses[0]
-                if lang == "es" and re.match(SPANISH_INFLECTED_GLOSS, gloss):
+                if (
+                    lemma_lang == "es"
+                    and gloss_lang == "en"
+                    and re.match(SPANISH_INFLECTED_GLOSS, gloss)
+                ):
                     continue
                 tags = set(sense.get("tags", []))
                 if tags.intersection(FILTER_TAGS):
@@ -127,7 +131,7 @@ def extract_wiktionary(
                         gloss,
                         example_sent,
                         ",".join(forms),
-                        get_ipas(lang, data.get("sounds", [])),
+                        get_ipas(lemma_lang, data.get("sounds", [])),
                         difficulty,
                     )
                 )
@@ -143,11 +147,15 @@ def extract_wiktionary(
             lemmas_row.append((lemma, row))
             added_lemmas.add(lemma)
     lemmas_tst.put_values(lemmas_row)
-    tst_filename = f"{lang}/wiktionary_{lang}_tst_v{MAJOR_VERSION}"
+    tst_filename = (
+        f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_tst_v{MAJOR_VERSION}"
+    )
     with open(tst_filename, "wb") as f:
         pickle.dump(lemmas_tst, f)
 
-    wiktionary_json_filename = f"{lang}/wiktionary_{lang}_v{MAJOR_VERSION}.json"
+    wiktionary_json_filename = (
+        f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{MAJOR_VERSION}.json"
+    )
     with open(wiktionary_json_filename, "w", encoding="utf-8") as f:
         json.dump(words, f)
     return [Path(wiktionary_json_filename), Path(tst_filename)]
