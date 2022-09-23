@@ -57,11 +57,12 @@ def create_file(lemma_lang: str, languages: dict[str, str], gloss_lang: str) -> 
         cn_json_path = Path(
             f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{MAJOR_VERSION}.json"
         )
+        cn_tst_path = tst_path.rename(f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_tst_v{MAJOR_VERSION}")
         cn_dump_path = Path(
             f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_dump_v{MAJOR_VERSION}"
         )
         dump_wiktionary(cn_json_path, cn_dump_path, lemma_lang)
-        compress(lemma_lang, "zh_cn", [cn_json_path, tst_path, cn_dump_path])
+        compress(lemma_lang, "zh_cn", [cn_json_path, cn_tst_path, cn_dump_path])
 
     if lemma_lang == "en" and gloss_lang == "en":
         with open("en/kindle_lemmas.json", encoding="utf-8") as f:
