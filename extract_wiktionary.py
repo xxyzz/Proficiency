@@ -1,4 +1,5 @@
 import json
+import operator
 import pickle
 import re
 import subprocess
@@ -57,8 +58,10 @@ def extract_wiktionary(
     words = []
     enabled_words_pos = set()
     len_limit = 2 if lemma_lang in CJK_LANGS else 3
-    if lemma_lang == "zh":
+    if lemma_lang == "zh" or gloss_lang == "zh":
         converter = opencc.OpenCC("t2s.json")
+    if gloss_lang == "zh":
+        zh_cn_words = []
 
     with open(kaikki_path, encoding="utf-8") as f:
         for line in f:
@@ -122,6 +125,7 @@ def extract_wiktionary(
                 short_gloss = short_def(gloss)
                 if short_gloss == "of":
                     continue
+                ipas = get_ipas(lemma_lang, data.get("sounds", []))
                 words.append(
                     (
                         enabled,
@@ -131,13 +135,27 @@ def extract_wiktionary(
                         gloss,
                         example_sent,
                         ",".join(forms),
-                        get_ipas(lemma_lang, data.get("sounds", [])),
+                        ipas,
                         difficulty,
                     )
                 )
+                if gloss_lang == "zh":
+                    zh_cn_words.append(
+                        (
+                            enabled,
+                            word,
+                            pos,
+                            converter.convert(short_gloss),
+                            converter.convert(gloss),
+                            converter.convert(example_sent) if example_sent else None,
+                            ",".join(forms),
+                            ipas,
+                            difficulty,
+                        )
+                    )
                 enabled = False
 
-    words.sort(key=lambda x: x[1])
+    words.sort(key=operator.itemgetter(1))
     lemmas_tst = TST()
     lemmas_row = []
     added_lemmas = set()
@@ -160,6 +178,14 @@ def extract_wiktionary(
     )
     with wiktionary_json_path.open("w", encoding="utf-8") as f:
         json.dump(words, f)
+
+    if gloss_lang == "zh":
+        zh_cn_words.sort(key=operator.itemgetter(1))
+        with open(
+                f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{MAJOR_VERSION}.json", "w", encoding="utf-8"
+        ) as f:
+            json.dump(zh_cn_words, f)
+
     return [wiktionary_json_path, tst_path]
 
 

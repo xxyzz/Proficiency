@@ -14,9 +14,10 @@ MAJOR_VERSION = "0"
 
 
 def compress(lemma_lang: str, gloss_lang: str, files: list[Path]) -> None:
-    with tarfile.open(
-        f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.tar.gz", "x:gz"
-    ) as tar:
+    tar_path = Path(f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.tar.gz")
+    if tar_path.exists():
+        tar_path.unlink()
+    with tarfile.open(tar_path, "x:gz") as tar:
         for wiktionary_file in files:
             tar.add(wiktionary_file)
 
@@ -51,6 +52,16 @@ def create_file(lemma_lang: str, languages: dict[str, str], gloss_lang: str) -> 
     compress(
         lemma_lang, gloss_lang, [wiktionary_json_path, tst_path, wiktioanry_dump_path]
     )
+
+    if gloss_lang == "zh":
+        cn_json_path = Path(
+            f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{MAJOR_VERSION}.json"
+        )
+        cn_dump_path = Path(
+            f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_dump_v{MAJOR_VERSION}"
+        )
+        dump_wiktionary(cn_json_path, cn_dump_path, lemma_lang)
+        compress(lemma_lang, "zh_cn", [cn_json_path, tst_path, cn_dump_path])
 
     if lemma_lang == "en" and gloss_lang == "en":
         with open("en/kindle_lemmas.json", encoding="utf-8") as f:
