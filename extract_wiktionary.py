@@ -182,7 +182,9 @@ def extract_wiktionary(
     if gloss_lang == "zh":
         zh_cn_words.sort(key=operator.itemgetter(1))
         with open(
-                f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{MAJOR_VERSION}.json", "w", encoding="utf-8"
+            f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{MAJOR_VERSION}.json",
+            "w",
+            encoding="utf-8",
         ) as f:
             json.dump(zh_cn_words, f)
 
@@ -225,8 +227,8 @@ def get_ipas(lang, sounds):
 
 
 def short_def(gloss: str) -> str:
-    gloss = gloss.removesuffix(".")
-    gloss = re.sub(r"\([^)]+\) ?", "", gloss)
-    gloss = min(gloss.split(";"), key=len)
-    gloss = gloss.split(",", 1)[0]
+    gloss = gloss.removesuffix(".").removesuffix("。")
+    gloss = re.sub(r"\([^)]+\)|（[^）]+）|〈[^〉]+〉|\[[^]]+\]", "", gloss)
+    gloss = min(re.split(";|；|、", gloss), key=len)
+    gloss = min(re.split(",|，", gloss), key=len)
     return gloss.strip()
