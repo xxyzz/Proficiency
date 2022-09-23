@@ -24,14 +24,16 @@ def compress(lemma_lang: str, gloss_lang: str, files: list[Path]) -> None:
 def create_file(lemma_lang: str, languages: dict[str, str], gloss_lang: str) -> None:
     if gloss_lang == "en":
         kaikki_path = download_kaikki_json(lemma_lang, languages[lemma_lang])
-    else:
+    elif lemma_lang != "hr":
         kaikki_path = Path(f"{lemma_lang}-{gloss_lang}/{lemma_lang}-{gloss_lang}.json")
+    else:
+        kaikki_path = Path(f"sh-{gloss_lang}/sh-{gloss_lang}.json")
 
     if lemma_lang != "en":
         difficulty_json_path = Path(f"{lemma_lang}/difficulty.json")
         difficulty_data = {}
         if difficulty_json_path.exists():
-            with open(f"{lemma_lang}/difficulty.json", encoding="utf-8") as f:
+            with difficulty_json_path.open(encoding="utf-8") as f:
                 difficulty_data = json.load(f)
     else:
         with open("en/kindle_lemmas.json", encoding="utf-8") as f:

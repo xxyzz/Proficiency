@@ -147,18 +147,20 @@ def extract_wiktionary(
             lemmas_row.append((lemma, row))
             added_lemmas.add(lemma)
     lemmas_tst.put_values(lemmas_row)
-    tst_filename = (
+    tst_path = Path(
         f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_tst_v{MAJOR_VERSION}"
     )
-    with open(tst_filename, "wb") as f:
+    if not tst_path.parent.exists():
+        tst_path.parent.mkdir()
+    with tst_path.open("wb") as f:
         pickle.dump(lemmas_tst, f)
 
-    wiktionary_json_filename = (
+    wiktionary_json_path = Path(
         f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{MAJOR_VERSION}.json"
     )
-    with open(wiktionary_json_filename, "w", encoding="utf-8") as f:
+    with wiktionary_json_path.open("w", encoding="utf-8") as f:
         json.dump(words, f)
-    return [Path(wiktionary_json_filename), Path(tst_filename)]
+    return [wiktionary_json_path, tst_path]
 
 
 def get_ipas(lang, sounds):
