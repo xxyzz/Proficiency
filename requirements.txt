@@ -1,5 +1,9 @@
 flashtext @ git+https://github.com/vi3k6i5/flashtext@b316c7e9e54b6b4d078462b302a83db85f884a94
-lemminflect==0.2.2
-numpy==1.23.3
-OpenCC==1.1.4
+lemminflect
+numpy
+OpenCC
 pyahocorasick==1.4.4
+wordfreq
+mecab-python3
+ipadic
+mecab-ko-dic

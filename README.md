@@ -14,6 +14,8 @@ Language files for [WordDumb](https://github.com/xxyzz/WordDumb).
 
 - [Open Chinese Convert](https://github.com/BYVoid/OpenCC): convert Chinese characters
 
+- [wordfreq](https://github.com/rspeer/wordfreq)
+
 ## Create files
 
 ```

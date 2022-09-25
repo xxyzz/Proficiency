@@ -5,8 +5,6 @@ import re
 import subprocess
 from pathlib import Path
 
-import opencc
-
 from tst import TST
 
 FILTER_TAGS = frozenset(
@@ -53,15 +51,14 @@ def download_kaikki_json(lang: str, kaikki_lang: str) -> Path:
 def extract_wiktionary(
     lemma_lang: str, gloss_lang: str, kaikki_path: Path, difficulty_data: dict[str, int]
 ) -> list[Path]:
-    from main import MAJOR_VERSION
-
     words = []
+    zh_cn_words = []
     enabled_words_pos = set()
     len_limit = 2 if lemma_lang in CJK_LANGS else 3
     if lemma_lang == "zh" or gloss_lang == "zh":
+        import opencc
+
         converter = opencc.OpenCC("t2s.json")
-    if gloss_lang == "zh":
-        zh_cn_words = []
 
     with open(kaikki_path, encoding="utf-8") as f:
         for line in f:
@@ -74,18 +71,18 @@ def extract_wiktionary(
                 or re.match(r"\W|\d", word)
             ):
                 continue
-            if lemma_lang in CJK_LANGS and re.fullmatch(r"[a-zA-Z\d]+", word):
-                continue
 
             word_pos = f"{word} {pos}"
             enabled = False if word_pos in enabled_words_pos else True
             difficulty = 1
             if difficulty_data:
                 if enabled and word in difficulty_data:
-                    enabled = True
                     difficulty = difficulty_data[word]
                 else:
                     enabled = False
+            else:
+                difficulty = freq_to_difficulty(word, lemma_lang)
+
             if enabled:
                 enabled_words_pos.add(word_pos)
 
@@ -104,10 +101,7 @@ def extract_wiktionary(
                 example_sent = None
                 if not glosses:
                     continue
-                if len(glosses) > 1:
-                    gloss = glosses[1]
-                else:
-                    gloss = glosses[0]
+                gloss = glosses[1] if len(glosses) > 1 else glosses[0]
                 if (
                     lemma_lang == "es"
                     and gloss_lang == "en"
@@ -123,6 +117,8 @@ def extract_wiktionary(
                         example_sent = example
                         break
                 short_gloss = short_def(gloss)
+                if not short_gloss:
+                    short_gloss = gloss
                 if short_gloss == "of":
                     continue
                 ipas = get_ipas(lemma_lang, data.get("sounds", []))
@@ -154,6 +150,14 @@ def extract_wiktionary(
                         )
                     )
                 enabled = False
+
+    return save_files(words, lemma_lang, gloss_lang, zh_cn_words)
+
+
+def save_files(
+    words: list[tuple], lemma_lang: str, gloss_lang: str, zh_cn_words: list[tuple]
+) -> list[Path]:
+    from main import MAJOR_VERSION
 
     words.sort(key=operator.itemgetter(1))
     lemmas_tst = TST()
@@ -229,6 +233,23 @@ def get_ipas(lang, sounds):
 def short_def(gloss: str) -> str:
     gloss = gloss.removesuffix(".").removesuffix("。")
     gloss = re.sub(r"\([^)]+\)|（[^）]+）|〈[^〉]+〉|\[[^]]+\]", "", gloss)
-    gloss = min(re.split(";|；|、", gloss), key=len)
+    gloss = min(re.split(";|；", gloss), key=len)
     gloss = min(re.split(",|，", gloss), key=len)
+    gloss = min(re.split("、|/", gloss), key=len)
     return gloss.strip()
+
+
+def freq_to_difficulty(word: str, lang: str) -> int:
+    from wordfreq import zipf_frequency
+
+    freq = zipf_frequency(word, lang)
+    if freq >= 7:
+        return 5
+    elif freq >= 5:
+        return 4
+    elif freq >= 3:
+        return 3
+    elif freq >= 1:
+        return 2
+    else:
+        return 1
