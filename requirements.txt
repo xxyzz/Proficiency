@@ -3,7 +3,4 @@ lemminflect
 numpy
 OpenCC
 pyahocorasick==1.4.4
-wordfreq
-mecab-python3
-ipadic
-mecab-ko-dic
+wordfreq[mecab]
