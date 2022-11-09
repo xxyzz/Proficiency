@@ -9,7 +9,7 @@ from dump_wiktionary import dump_wiktionary
 from en.dump_kindle_lemmas import dump_kindle_lemmas
 from extract_wiktionary import download_kaikki_json, extract_wiktionary
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 MAJOR_VERSION = "0"
 
 
@@ -28,9 +28,9 @@ def create_file(lemma_lang: str, languages: dict[str, str], gloss_lang: str) -> 
     if gloss_lang == "en":
         kaikki_path = download_kaikki_json(lemma_lang, languages[lemma_lang])
     elif lemma_lang != "hr":
-        kaikki_path = Path(f"{lemma_lang}-{gloss_lang}/{lemma_lang}-{gloss_lang}.json")
+        kaikki_path = Path(f"{lemma_lang}-{gloss_lang}.json")
     else:
-        kaikki_path = Path(f"sh-{gloss_lang}/sh-{gloss_lang}.json")
+        kaikki_path = Path(f"sh-{gloss_lang}.json")
 
     if lemma_lang != "en":
         difficulty_json_path = Path(f"{lemma_lang}/difficulty.json")
@@ -89,8 +89,13 @@ def main():
     args = parser.parse_args()
 
     with ProcessPoolExecutor() as executor:
-        for lemma_lang in args.lemma_lang_codes:
+        results = [
             executor.submit(create_file, lemma_lang, languages, args.gloss_lang)
+            for lemma_lang in args.lemma_lang_codes
+        ]
+
+    for result in results:
+        result.result()
 
 
 if __name__ == "__main__":

@@ -44,6 +44,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.gloss_lang }}_gloss
+          if-no-files-found: error
           path: |
             **/wiktionary_*.tar.gz
             en/kindle_lemmas_dump_*
