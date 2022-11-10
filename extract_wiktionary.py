@@ -88,6 +88,12 @@ def extract_wiktionary(
 
             forms = set()
             for form in map(lambda x: x.get("form"), data.get("forms", [])):
+                if lemma_lang == "fr" and gloss_lang == "zh":
+                    # temporarily filter garbage data
+                    if form.startswith("Category:"):
+                        continue
+                    if len(form) / len(word) > 2:
+                        continue
                 if form and form != word and len(form) >= len_limit:
                     forms.add(form)
             if lemma_lang == "zh":
@@ -111,6 +117,7 @@ def extract_wiktionary(
                 tags = set(sense.get("tags", []))
                 if tags.intersection(FILTER_TAGS):
                     continue
+
                 for example in examples:
                     example = example.get("text")
                     if example and example != "(obsolete)":
