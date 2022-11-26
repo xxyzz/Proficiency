@@ -1,13 +1,14 @@
 import json
 import pickle
+from pathlib import Path
 
 
-def get_ipa(lang, ipas):
+def get_ipa(lang: str, ipas: dict[str, str] | str) -> str:
     if not ipas:
         return ""
     elif lang in ["en", "zh"]:
         try:
-            from .config import prefs
+            from .config import prefs  # type: ignore
         except ImportError:
             prefs = {"en_ipa": "US", "zh_ipa": "Pinyin"}
 
@@ -19,11 +20,11 @@ def get_ipa(lang, ipas):
         elif lang == "en":
             for ipa in ipas.values():
                 return ipa
-    else:
-        return ipas
+
+    return ipas  # type: ignore
 
 
-def dump_wiktionary(json_path, dump_path, lang):
+def dump_wiktionary(json_path: Path, dump_path: Path, lang: str) -> None:
     with open(json_path, encoding="utf-8") as f:
         words = json.load(f)
 

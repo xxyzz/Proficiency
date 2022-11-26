@@ -2,6 +2,10 @@
 
 Language files for [WordDumb](https://github.com/xxyzz/WordDumb).
 
+## Data source
+
+English Wiktionary extracted data come from kaikki.org, Chinese Wiktionary data are created with the [Wiktextract](https://github.com/tatuylonen/wiktextract) tool. Word difficulty data sources are listed in each language subfolders.
+
 ## Dependencies
 
 - wget: download files
@@ -14,7 +18,7 @@ Language files for [WordDumb](https://github.com/xxyzz/WordDumb).
 
 - [Open Chinese Convert](https://github.com/BYVoid/OpenCC): convert Chinese characters
 
-- [wordfreq](https://github.com/rspeer/wordfreq)
+- [wordfreq](https://github.com/rspeer/wordfreq): get word frequency data
 
 ## Create files
 

@@ -4,6 +4,7 @@ import pickle
 import re
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from tst import TST
 
@@ -87,7 +88,7 @@ def extract_wiktionary(
                 enabled_words_pos.add(word_pos)
 
             forms = set()
-            for form in map(lambda x: x.get("form"), data.get("forms", [])):
+            for form in map(lambda x: x.get("form"), data.get("forms", [])):  # type: ignore
                 if lemma_lang == "fr" and gloss_lang == "zh":
                     # temporarily filter garbage data
                     if form.startswith("Category:"):
@@ -162,7 +163,7 @@ def extract_wiktionary(
 
 
 def save_files(
-    words: list[tuple], lemma_lang: str, gloss_lang: str, zh_cn_words: list[tuple]
+    words: list[Any], lemma_lang: str, gloss_lang: str, zh_cn_words: list[Any]
 ) -> list[Path]:
     from main import MAJOR_VERSION
 
@@ -202,7 +203,7 @@ def save_files(
     return [wiktionary_json_path, tst_path]
 
 
-def get_ipas(lang, sounds):
+def get_ipas(lang: str, sounds: list[dict[str, str]]) -> dict[str, str] | str:
     ipas = {}
     if lang == "en":
         for sound in sounds:

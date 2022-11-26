@@ -1,10 +1,9 @@
 import json
 import re
-import sys
 from pathlib import Path
 
 
-def main():
+def main() -> None:
     """
     Convert the Wikitext of pages in https://en.wiktionary.org/wiki/Appendix:JLPT
     to difficulty value
@@ -12,7 +11,7 @@ def main():
     words = {}
     for txt_path in Path(".").glob("*.txt"):
         filename = txt_path.name
-        difficulty = int(re.search(r"(\d)", filename).group(0))
+        difficulty = int(re.search(r"(\d)", filename).group(0))  # type: ignore
         with txt_path.open(encoding="utf-8") as f:
             for line in f:
                 for match in re.finditer(r"{{([^}]+)}}", line):
@@ -24,4 +23,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

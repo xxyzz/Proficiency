@@ -2,7 +2,6 @@ import argparse
 import csv
 import json
 import re
-import sys
 
 
 def convert_difficulty(level: str) -> int:
@@ -17,9 +16,11 @@ def convert_difficulty(level: str) -> int:
             return 2
         case "第7級":
             return 1
+        case _:
+            return -1
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Convert COCT data")
     parser.add_argument(
         "csv_path", help="CSV file exported from Excel file's main table"
@@ -58,4 +59,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

@@ -39,11 +39,11 @@ with open(args.csv_path, newline="", encoding="utf-8") as f:
         sd_ap = row[-1]
         if not word or not sd_ap:
             continue
-        sd_ap = float(sd_ap)
-        if sd_ap >= 5:
+        sd_ap_val = float(sd_ap)
+        if sd_ap_val >= 5:
             simple_words.add(word)
             continue
-        words_dict[word] = sd_ap_to_difficulty(sd_ap)
+        words_dict[word] = sd_ap_to_difficulty(sd_ap_val)
 
 with open("lemmas.json", encoding="utf-8") as f:
     lemmas_dict = json.load(f)

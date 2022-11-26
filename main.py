@@ -1,6 +1,5 @@
 import argparse
 import json
-import sys
 import tarfile
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -74,7 +73,7 @@ def create_file(lemma_lang: str, languages: dict[str, str], gloss_lang: str) -> 
             dump_kindle_lemmas(lemmas, f"en/kindle_lemmas_dump_v{MAJOR_VERSION}")
 
 
-def main():
+def main() -> None:
     with open("kaikki_languages.json", encoding="utf-8") as f:
         languages = json.load(f)
 
@@ -99,4 +98,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
