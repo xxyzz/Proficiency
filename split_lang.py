@@ -1,7 +1,6 @@
 import json
 import sys
 import tarfile
-import subprocess
 
 
 def main() -> None:

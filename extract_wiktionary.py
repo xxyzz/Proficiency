@@ -254,7 +254,11 @@ def get_ipas(lang: str, sounds: list[dict[str, str]]) -> dict[str, str] | str:
 
 def short_def(gloss: str) -> str:
     gloss = gloss.removesuffix(".").removesuffix("。")
-    gloss = re.sub(r"\([^)]+\)|（[^）]+）|〈[^〉]+〉|\[[^]]+\]", "", gloss)
+    gloss = re.sub(
+        r"\([^)]+\)|（[^）]+）|〈[^〉]+〉|\[[^]]+\]|［[^］]+］|【[^】]+】|﹝[^﹞]+﹞|「[^」]+」",
+        "",
+        gloss,
+    )
     gloss = min(re.split(";|；", gloss), key=len)
     gloss = min(re.split(",|，", gloss), key=len)
     gloss = min(re.split("、|/", gloss), key=len)
