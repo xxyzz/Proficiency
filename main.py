@@ -6,9 +6,13 @@ from pathlib import Path
 
 from dump_wiktionary import dump_wiktionary
 from en.dump_kindle_lemmas import dump_kindle_lemmas
-from extract_wiktionary import download_kaikki_json, extract_wiktionary
+from extract_wiktionary import (
+    download_kaikki_json,
+    download_zh_json,
+    extract_wiktionary,
+)
 
-VERSION = "0.3.1"
+VERSION = "0.4.0"
 MAJOR_VERSION = "0"
 
 
@@ -25,11 +29,9 @@ def compress(lemma_lang: str, gloss_lang: str, files: list[Path]) -> None:
 
 def create_file(lemma_lang: str, languages: dict[str, str], gloss_lang: str) -> None:
     if gloss_lang == "en":
-        kaikki_path = download_kaikki_json(lemma_lang, languages[lemma_lang])
-    elif lemma_lang != "hr":
-        kaikki_path = Path(f"{lemma_lang}-{gloss_lang}.json")
+        json_path = download_kaikki_json(lemma_lang, languages[lemma_lang])
     else:
-        kaikki_path = Path(f"sh-{gloss_lang}.json")
+        json_path = download_zh_json("sh" if lemma_lang == "hr" else lemma_lang)
 
     if lemma_lang != "en":
         difficulty_json_path = Path(f"{lemma_lang}/difficulty.json")
@@ -44,7 +46,7 @@ def create_file(lemma_lang: str, languages: dict[str, str], gloss_lang: str) -> 
             }
 
     wiktionary_json_path, tst_path = extract_wiktionary(
-        lemma_lang, gloss_lang, kaikki_path, difficulty_data
+        lemma_lang, gloss_lang, json_path, difficulty_data
     )
     wiktioanry_dump_path = Path(
         f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_dump_v{MAJOR_VERSION}"

@@ -3,8 +3,11 @@ import operator
 import pickle
 import re
 import subprocess
+import tarfile
+from io import BytesIO
 from pathlib import Path
 from typing import Any
+from urllib.request import urlopen
 
 from tst import TST
 
@@ -46,6 +49,17 @@ def download_kaikki_json(lang: str, kaikki_lang: str) -> Path:
             text=True,
         )
 
+    return filepath
+
+
+def download_zh_json(lang: str) -> Path:
+    filepath = Path(f"{lang}/{lang}_zh.json")
+    if not filepath.exists():
+        with urlopen(
+            f"https://github.com/xxyzz/wiktextract/releases/latest/download/{lang}_zh.tar.gz"
+        ) as r:
+            with tarfile.open(fileobj=BytesIO(r.read())) as tar:
+                tar.extractall(lang)
     return filepath
 
 
