@@ -252,7 +252,7 @@ def short_def(gloss: str) -> str:
         "",
         gloss,
     )
-    gloss = min(re.split(";|；", gloss), key=len)
+    gloss = min(re.split(";|；|。", gloss), key=len)
     gloss = min(re.split(",|，", gloss), key=len)
     gloss = min(re.split("、|/", gloss), key=len)
     return gloss.strip()
