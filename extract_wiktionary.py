@@ -101,16 +101,9 @@ def extract_wiktionary(
             if enabled:
                 enabled_words_pos.add(word_pos)
 
-            forms = set()
-            for form in map(lambda x: x.get("form"), data.get("forms", [])):  # type: ignore
-                if lemma_lang == "fr" and gloss_lang == "zh":
-                    # temporarily filter garbage data
-                    if form.startswith("Category:"):
-                        continue
-                    if len(form) / len(word) > 2:
-                        continue
-                if form and form != word and len(form) >= len_limit:
-                    forms.add(form)
+            forms = get_forms(
+                word, lemma_lang, gloss_lang, data.get("forms", []), pos, len_limit
+            )
             if lemma_lang == "zh":
                 simplified_form = converter.convert(word)
                 if simplified_form != word:
@@ -279,3 +272,45 @@ def freq_to_difficulty(word: str, lang: str) -> int:
         return 2
     else:
         return 1
+
+
+# https://lemminflect.readthedocs.io/en/latest/tags/
+LEMMINFLECT_POS_TAGS = {
+    "adj": "ADJ",
+    "adv": "ADV",
+    "noun": "NOUN",
+    "name": "PROPN",
+    "verb": "VERB",
+}
+
+
+def get_forms(
+    word: str,
+    lemma_lang: str,
+    gloss_lang: str,
+    forms_data: list[dict[str, str]],
+    pos: str,
+    len_limit: int,
+) -> set[str]:
+    forms: set[str] = set()
+    if lemma_lang == "en" and gloss_lang == "zh":
+        from en.dump_kindle_lemmas import get_inflections
+
+        # Extracted Chinese Wiktionary forms data are not usable yet
+        find_forms = get_inflections(word, LEMMINFLECT_POS_TAGS.get(pos))
+        if find_forms:
+            if word in find_forms:
+                find_forms.remove(word)
+            if find_forms:
+                forms = find_forms
+    else:
+        for form in map(lambda x: x.get("form", ""), forms_data):
+            if gloss_lang == "zh" and (
+                form.startswith("Category:") or len(form) / len(word) > 2
+            ):
+                # temporarily filter garbage data
+                continue
+            if form and form != word and len(form) >= len_limit:
+                forms.add(form)
+
+    return forms
