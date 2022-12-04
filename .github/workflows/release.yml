@@ -1,7 +1,4 @@
-on:
-  push:
-    tags:
-      - 'v*'
+on: push
 
 name: Create Release
 
@@ -12,8 +9,10 @@ jobs:
       - uses: dawidd6/action-download-artifact@v2
         with:
           workflow: build.yml
-          commit: ${{ github.sha }}
+          run_id: 3613378250
 
-      - run: gh release create ${GITHUB_REF_NAME} $(ls **/*.tar.gz) $(ls **/kindle_lemmas_dump_*)
+      - run: ls '**/*.tar.gz'
+
+      - run: gh release create v0.4.0 '**/*.tar.gz' '**/kindle_lemmas_dump_*'
         env:
           GH_TOKEN: ${{ github.token }}
