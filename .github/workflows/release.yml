@@ -14,8 +14,6 @@ jobs:
           workflow: build.yml
 	  commit: ${{ github.sha }}
 
-      - uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            **/*.tar.gz
-            **/kindle_lemmas_dump_*
+      - run: gh release create ${GITHUB_REF_NAME} **/*.tar.gz en/kindle_lemmas_dump_*
+        env:
+	  GH_TOKEN: ${{ github.token }}
