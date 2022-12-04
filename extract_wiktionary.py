@@ -132,9 +132,7 @@ def extract_wiktionary(
                         example_sent = example
                         break
                 short_gloss = short_def(gloss)
-                if not short_gloss:
-                    short_gloss = gloss
-                if short_gloss == "of":
+                if not short_gloss or short_gloss == "of":
                     continue
                 ipas = get_ipas(lemma_lang, data.get("sounds", []))
                 words.append(
