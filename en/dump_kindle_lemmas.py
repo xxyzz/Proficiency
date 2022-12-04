@@ -10,7 +10,7 @@ from typing import Any
 POS_TYPE = {0: "NOUN", 1: "VERB", 2: "ADJ", 3: "ADV", 9: "PROPN"}
 
 
-def get_inflections(lemma: str, pos: str) -> set[str]:
+def get_inflections(lemma: str, pos: str | None) -> set[str]:
     from lemminflect import getAllInflections, getAllInflectionsOOV
 
     inflections = set(chain(*getAllInflections(lemma, pos).values()))
@@ -20,7 +20,7 @@ def get_inflections(lemma: str, pos: str) -> set[str]:
 
 
 def add_lemma(
-    lemma: str, pos: str, data: tuple[int, int], keyword_processor: Any
+    lemma: str, pos: str | None, data: tuple[int, int], keyword_processor: Any
 ) -> None:
     if " " in lemma:
         if "/" in lemma:  # "be/get togged up/out"
@@ -48,7 +48,7 @@ def dump_kindle_lemmas(
 
     keyword_processor = KeywordProcessor()
     for lemma, (difficulty, sense_id, pos) in lemmas.items():
-        pos_str = POS_TYPE.get(pos, "")
+        pos_str = POS_TYPE.get(pos)
         data = (difficulty, sense_id)
         if "(" in lemma:  # "(as) good as new"
             add_lemma(re.sub(r"[()]", "", lemma), pos_str, data, keyword_processor)
