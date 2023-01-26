@@ -15,6 +15,7 @@ env
 __pycache__
 
 kaikki.*.json
+*_zh.json
 *tar.gz
 wiktionary_*.db
 wiktionary_*_dump_*

@@ -95,6 +95,8 @@ def create_wiktionary_lemmas_db(
     db_path = Path(
         f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{major_version}.db"
     )
+    if not db_path.parent.is_dir():
+        db_path.parent.mkdir()
     if db_path.exists():
         db_path.unlink()
     if lemma_lang == "en":
