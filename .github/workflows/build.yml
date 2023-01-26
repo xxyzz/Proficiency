@@ -34,4 +34,6 @@ jobs:
         with:
           name: ${{ matrix.gloss_lang }}_gloss
           if-no-files-found: error
-          path: **/*.tar.gz
+          path: |
+            **/wiktionary_*.tar.gz
+            **/kindle_*.tar.gz
