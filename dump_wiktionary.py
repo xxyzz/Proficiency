@@ -1,58 +1,64 @@
 import json
 import pickle
+import sqlite3
 from pathlib import Path
 
 
-def get_ipa(lang: str, ipas: dict[str, str] | str) -> str:
-    if not ipas:
-        return ""
-    elif lang in ["en", "zh"]:
-        try:
-            from .config import prefs  # type: ignore
-        except ImportError:
-            prefs = {"en_ipa": "US", "zh_ipa": "Pinyin"}
-
-        ipa_tag = prefs["en_ipa"] if lang == "en" else prefs["zh_ipa"]
-        if isinstance(ipas, str):
-            return ipas
-        elif ipa_tag in ipas:
-            return ipas[ipa_tag]
-        elif lang == "en":
-            for ipa in ipas.values():
-                return ipa
-
-    return ipas  # type: ignore
-
-
-def dump_wiktionary(json_path: Path, dump_path: Path, lang: str) -> None:
-    with open(json_path, encoding="utf-8") as f:
-        words = json.load(f)
-
-    if lang in ["zh", "ja", "ko"]:
+def dump_wiktionary(lemma_lang: str, db_path: Path, dump_path: Path) -> None:
+    is_cjk = lemma_lang in ["zh", "ja", "ko"]
+    if is_cjk:
         import ahocorasick
 
-        automaton = ahocorasick.Automaton()
-        for _, word, _, short_gloss, gloss, example, forms, ipas, _ in filter(
-            lambda x: x[0] and not automaton.exists(x[1]), words
-        ):
-            ipa = get_ipa(lang, ipas)
-            automaton.add_word(word, (word, short_gloss, gloss, example, ipa))
-            for form in filter(lambda x: not automaton.exists(x), forms.split(",")):
-                automaton.add_word(form, (form, short_gloss, gloss, example, ipa))
-
-        automaton.make_automaton()
-        automaton.save(str(dump_path), pickle.dumps)
+        kw_processor = ahocorasick.Automaton()
     else:
         from flashtext import KeywordProcessor
 
-        keyword_processor = KeywordProcessor()
-        for _, word, _, short_gloss, gloss, example, forms, ipas, _ in filter(
-            lambda x: x[0] and x[1] not in keyword_processor, words
-        ):
-            ipa = get_ipa(lang, ipas)
-            keyword_processor.add_keyword(word, (short_gloss, gloss, example, ipa))
-            for form in filter(lambda x: x not in keyword_processor, forms.split(",")):
-                keyword_processor.add_keyword(form, (short_gloss, gloss, example, ipa))
+        kw_processor = KeywordProcessor()
 
+    try:
+        from .config import prefs  # type: ignore
+
+        prefered_en_ipa = prefs["en_ipa"]
+        prefered_zh_ipa = prefs["zh_ipa"]
+        difficulty_limit = prefs[f"{lemma_lang}_wiktionary_difficulty_limit"]
+    except ImportError:
+        prefered_en_ipa = "ga_ipa"
+        prefered_zh_ipa = "pinyin"
+        difficulty_limit = 5
+
+    conn = sqlite3.connect(db_path)
+    if lemma_lang == "en":
+        query_sql = "SELECT enabled, lemma, short_def, full_def, forms, example, ga_ipa, rp_ipa FROM lemmas WHERE difficulty <= ?"
+    elif lemma_lang == "zh":
+        query_sql = "SELECT enabled, lemma, short_def, full_def, forms, example, pinyin, bopomofo FROM lemmas WHERE difficulty <= ?"
+    else:
+        query_sql = "SELECT enabled, lemma, short_def, full_def, forms, example, ipa FROM lemmas WHERE difficulty <= ?"
+    for enabled, lemma, short_def, full_def, forms, example, *ipas in conn.execute(
+        query_sql, (difficulty_limit,)
+    ):
+        if lemma_lang == "en":
+            ga_ipa, rp_ipa = ipas
+            ipa = ga_ipa if prefered_en_ipa == "ga_ipa" else rp_ipa
+        elif lemma_lang == "zh":
+            pinyin, bopomofo = ipas
+            ipa = pinyin if prefered_zh_ipa == "pinyin" else bopomofo
+        else:
+            ipa = ipas[0]
+
+        if is_cjk:
+            kw_processor.add_word(lemma, (lemma, short_def, full_def, example, ipa))
+        else:
+            kw_processor.add_keyword(lemma, (short_def, full_def, example, ipa))
+        for form in forms.split(","):
+            if is_cjk:
+                kw_processor.add_word(form, (form, short_def, full_def, example, ipa))
+            else:
+                kw_processor.add_keyword(form, (short_def, full_def, example, ipa))
+
+    conn.close()
+    if is_cjk:
+        kw_processor.make_automaton()
+        kw_processor.save(str(dump_path), pickle.dumps)
+    else:
         with open(dump_path, "wb") as f:
-            pickle.dump(keyword_processor, f)
+            pickle.dump(kw_processor, f)

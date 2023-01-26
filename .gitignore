@@ -16,7 +16,9 @@ __pycache__
 
 kaikki.*.json
 *tar.gz
-wiktionary_*.json
-wiktionary_*_tst_*
+wiktionary_*.db
 wiktionary_*_dump_*
-kindle_lemmas_dump_*
+kindle_*.db
+kindle_*_dump_v*
+forms.json
+translations.json
