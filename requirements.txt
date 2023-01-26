@@ -1,5 +1,5 @@
 flashtext @ git+https://github.com/vi3k6i5/flashtext@b316c7e9e54b6b4d078462b302a83db85f884a94
 lemminflect
 OpenCC
-pyahocorasick==1.4.4
+pyahocorasick==2.0.0
 wordfreq[mecab]

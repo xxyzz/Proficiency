@@ -5,7 +5,7 @@ import tarfile
 
 def main() -> None:
     """
-    Split extracted data to each language file.
+    Split extracted Chinese Wiktionary json file to each language file.
     """
 
     all_jsonl = sys.argv[1]

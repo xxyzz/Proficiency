@@ -24,12 +24,22 @@ Convert the semantic diversity-author prevalence(SD-AP) value:
 
 ## Data format
 
+`kindle_all_lemmas.csv`:
+
+
+```
+lemma,pos,sense_id,display_lemma_id
+'neath,preposition,69182,75849
+```
+
+`kindle_enabled_lemmas.json`:
+
 ```
 {
-  "'neath": [  // word
-    1,         // difficulty
-    69182,     // sense id
-    8          // POS type
+  "'neath": [       // word
+    1,             // difficulty
+    69182,         // sense id
+    "preposition"  // POS type
   ],
 ...
 ```
