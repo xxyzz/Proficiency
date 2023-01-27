@@ -224,9 +224,12 @@ def create_wiktionary_lemmas_db(
                     )
                 enabled = False
 
+    lemma_index_sql = "CREATE INDEX idx_lemmas_lemma ON lemmas (lemma)"
+    conn.execute(lemma_index_sql)
     conn.commit()
     conn.close()
     if gloss_lang == "zh":
+        zh_cn_conn.execute(lemma_index_sql)
         zh_cn_conn.commit()
         zh_cn_conn.close()
     if all_forms_data is not None:
