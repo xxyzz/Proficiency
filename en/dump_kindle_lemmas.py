@@ -15,7 +15,7 @@ def dump_kindle_lemmas(is_cjk: bool, db_path: Path, dump_path: Path) -> None:
 
     conn = sqlite3.connect(db_path)
     for lemma, difficulty, sense_id, forms_str in conn.execute(
-        "SELECT lemma, difficulty, sense_id, forms FROM lemmas WHERE enabled = 1"
+        "SELECT lemma, difficulty, sense_id, forms FROM lemmas WHERE enabled = 1 ORDER BY lemma"
     ):
         if is_cjk:
             kw_processor.add_word(lemma, (lemma, difficulty, sense_id))

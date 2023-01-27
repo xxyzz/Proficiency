@@ -28,11 +28,11 @@ def dump_wiktionary(lemma_lang: str, db_path: Path, dump_path: Path) -> None:
 
     conn = sqlite3.connect(db_path)
     if lemma_lang == "en":
-        query_sql = "SELECT lemma, short_def, full_def, forms, example, ga_ipa, rp_ipa FROM lemmas WHERE enabled = 1 AND difficulty <= ?"
+        query_sql = "SELECT lemma, short_def, full_def, forms, example, ga_ipa, rp_ipa FROM lemmas WHERE enabled = 1 AND difficulty <= ? ORDER BY lemma"
     elif lemma_lang == "zh":
-        query_sql = "SELECT lemma, short_def, full_def, forms, example, pinyin, bopomofo FROM lemmas WHERE enabled = 1 AND difficulty <= ?"
+        query_sql = "SELECT lemma, short_def, full_def, forms, example, pinyin, bopomofo FROM lemmas WHERE enabled = 1 AND difficulty <= ? ORDER BY lemma"
     else:
-        query_sql = "SELECT lemma, short_def, full_def, forms, example, ipa FROM lemmas WHERE enabled = 1 AND difficulty <= ?"
+        query_sql = "SELECT lemma, short_def, full_def, forms, example, ipa FROM lemmas WHERE enabled = 1 AND difficulty <= ? ORDER BY lemma"
     for lemma, short_def, full_def, forms, example, *ipas in conn.execute(
         query_sql, (difficulty_limit,)
     ):
