@@ -79,7 +79,7 @@ def main() -> None:
 
     if args.gloss_lang == "en":
         kaikki_json_path = Path("en/kaikki.org-dictionary-English.json")
-        translate_english_lemmas(kaikki_json_path, set(args.lemma_lang_codes))
+        translate_english_lemmas(kaikki_json_path, set(args.lemma_lang_codes) - {"en"})
         with ProcessPoolExecutor() as executor:
             results = [
                 executor.submit(create_kindle_files, lemma_lang, kaikki_json_path)
