@@ -124,26 +124,20 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
                 difficulty = enabled_lemmas[lemma][0] if lemma in enabled_lemmas else 1
                 data = (sense_id, enabled, lemma, pos_type, "", difficulty)
                 if "(" in lemma:  # "(as) good as new"
-                    conn.execute(
-                        "INSERT INTO lemmas VALUES(?, ?, ?, ?, ?, ?, ?)",
-                        data
-                        + (
-                            ",".join(
-                                get_en_lemma_forms(
-                                    re.sub(r"[()]", "", lemma), lemminflect_pos
-                                )
-                            ),
-                        ),
+                    forms_with_words_in_parentheses = get_en_lemma_forms(
+                        re.sub(r"[()]", "", lemma), lemminflect_pos
+                    )
+                    forms_without_words_in_parentheses = get_en_lemma_forms(
+                        " ".join(re.sub(r"\([^)]+\)", "", lemma).split()),
+                        lemminflect_pos,
                     )
                     conn.execute(
                         "INSERT INTO lemmas VALUES(?, ?, ?, ?, ?, ?, ?)",
                         data
                         + (
                             ",".join(
-                                get_en_lemma_forms(
-                                    " ".join(re.sub(r"\([^)]+\)", "", lemma).split()),
-                                    lemminflect_pos,
-                                )
+                                forms_with_words_in_parentheses
+                                | forms_without_words_in_parentheses
                             ),
                         ),
                     )
