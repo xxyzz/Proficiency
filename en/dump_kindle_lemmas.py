@@ -23,9 +23,9 @@ def dump_kindle_lemmas(is_cjk: bool, db_path: Path, dump_path: Path) -> None:
             kw_processor.add_keyword(lemma, (difficulty, sense_id))
         for form in forms_str.split(","):
             if is_cjk:
-                kw_processor.add_word(lemma, (lemma, difficulty, sense_id))
+                kw_processor.add_word(form, (form, difficulty, sense_id))
             else:
-                kw_processor.add_keyword(lemma, (difficulty, sense_id))
+                kw_processor.add_keyword(form, (difficulty, sense_id))
 
     conn.close()
     if is_cjk:
