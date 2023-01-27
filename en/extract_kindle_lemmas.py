@@ -105,11 +105,11 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
     conn = sqlite3.Connection(db_path)
     if lang == "en":
         conn.execute(
-            "CREATE TABLE lemmas (sense_id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT, difficulty INTEGER, forms TEXT)"
+            "CREATE TABLE lemmas (sense_id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT DEFAULT '', difficulty INTEGER, example TEXT DEFAULT '', forms TEXT)"
         )
     else:
         conn.execute(
-            "CREATE TABLE lemmas (sense_id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT, difficulty INTEGER, forms TEXT, display_lemma_id INTEGER)"
+            "CREATE TABLE lemmas (sense_id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT DEFAULT '', difficulty INTEGER, example TEXT DEFAULT '', forms TEXT DEFAULT '', display_lemma_id INTEGER)"
         )
 
     with open("en/kindle_all_lemmas.csv", newline="") as f:
@@ -122,7 +122,7 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
 
             if lang == "en":
                 difficulty = enabled_lemmas[lemma][0] if lemma in enabled_lemmas else 1
-                data = (sense_id, enabled, lemma, pos_type, "", difficulty)
+                data = (sense_id, enabled, lemma, pos_type, difficulty)
                 if "(" in lemma:  # "(as) good as new"
                     forms_with_words_in_parentheses = get_en_lemma_forms(
                         re.sub(r"[()]", "", lemma), lemminflect_pos
@@ -132,7 +132,7 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
                         lemminflect_pos,
                     )
                     conn.execute(
-                        "INSERT INTO lemmas VALUES(?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty, forms) VALUES(?, ?, ?, ?, ?, ?)",
                         data
                         + (
                             ",".join(
@@ -143,7 +143,7 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
                     )
                 else:
                     conn.execute(
-                        "INSERT INTO lemmas VALUES(?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty, forms) VALUES(?, ?, ?, ?, ?, ?)",
                         data + (",".join(get_en_lemma_forms(lemma, lemminflect_pos)),),
                     )
             else:
@@ -169,13 +169,12 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
                         else freq_to_difficulty(tr_lemma, lang)
                     )
                     conn.execute(
-                        "INSERT INTO lemmas VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty, forms, display_lemma_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
                         (
                             sense_id,
                             enabled,
                             tr_lemma,
                             pos_type,
-                            "",
                             difficulty,
                             ",".join(forms),
                             display_lemma_id,
@@ -183,15 +182,13 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
                     )
                 else:
                     conn.execute(
-                        "INSERT INTO lemmas VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty, display_lemma_id) VALUES(?, ?, ?, ?, ?, ?)",
                         (
                             sense_id,
                             enabled,
                             lemma,
                             pos_type,
-                            "",
                             1,
-                            "",
                             display_lemma_id,
                         ),
                     )
