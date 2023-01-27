@@ -57,6 +57,9 @@ def create_kindle_files(lemma_lang: str, kaikki_json_path: Path = Path()) -> Non
 
 
 def main() -> None:
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)s:%(message)s", level=logging.INFO
+    )
     with open("kaikki_languages.json", encoding="utf-8") as f:
         kaikki_languages = json.load(f)
 
