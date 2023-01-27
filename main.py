@@ -1,7 +1,9 @@
 import argparse
 import json
+import logging
 import tarfile
 from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 from pathlib import Path
 
 from dump_wiktionary import dump_wiktionary
@@ -22,7 +24,7 @@ def compress(tar_path: Path, files: list[Path]) -> None:
             tar.add(wiktionary_file)
 
 
-def create_wiktionary_files(lemma_lang: str, gloss_lang: str) -> None:
+def create_wiktionary_files(lemma_lang: str, gloss_lang: str = "en") -> None:
     db_paths = create_wiktionary_lemmas_db(lemma_lang, gloss_lang, MAJOR_VERSION)
     dump_path = Path(
         f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_dump_v{MAJOR_VERSION}"
@@ -43,7 +45,7 @@ def create_wiktionary_files(lemma_lang: str, gloss_lang: str) -> None:
         )
 
 
-def create_kindle_files(lemma_lang: str, kaikki_json_path: Path) -> None:
+def create_kindle_files(lemma_lang: str, kaikki_json_path: Path = Path()) -> None:
     db_path = Path(f"{lemma_lang}/kindle_{lemma_lang}_en_v{MAJOR_VERSION}.db")
     dump_path = Path(f"{lemma_lang}/kindle_{lemma_lang}_en_dump_v{MAJOR_VERSION}")
     create_kindle_lemmas_db(lemma_lang, kaikki_json_path, db_path)
@@ -69,25 +71,25 @@ def main() -> None:
     args = parser.parse_args()
 
     with ProcessPoolExecutor() as executor:
-        results = [
-            executor.submit(create_wiktionary_files, lemma_lang, args.gloss_lang)
-            for lemma_lang in args.lemma_lang_codes
-        ]
-
-        for result in results:
-            result.result()
-
-    if args.gloss_lang == "en":
-        kaikki_json_path = Path("en/kaikki.org-dictionary-English.json")
-        translate_english_lemmas(kaikki_json_path, set(args.lemma_lang_codes) - {"en"})
-        with ProcessPoolExecutor() as executor:
-            results = [
-                executor.submit(create_kindle_files, lemma_lang, kaikki_json_path)
-                for lemma_lang in args.lemma_lang_codes
-            ]
-
-            for result in results:
-                result.result()
+        logging.info("Creating Wiktionary files")
+        for ignore in executor.map(
+            partial(create_wiktionary_files, gloss_lang=args.gloss_lang),
+            args.lemma_lang_codes,
+        ):
+            pass
+        logging.info("Wiktionary files created")
+        if args.gloss_lang == "en":
+            kaikki_json_path = Path("en/kaikki.org-dictionary-English.json")
+            translate_english_lemmas(
+                kaikki_json_path, set(args.lemma_lang_codes) - {"en"}
+            )
+            logging.info("Creating Kindle files")
+            for ignore in executor.map(
+                partial(create_kindle_files, kaikki_json_path=kaikki_json_path),
+                args.lemma_lang_codes,
+            ):
+                pass
+            logging.info("Kindle files created")
 
 
 if __name__ == "__main__":
