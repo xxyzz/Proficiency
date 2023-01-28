@@ -58,16 +58,16 @@ def get_en_lemma_forms(lemma: str, pos: str | None) -> set[str]:
         return {lemma}.union(get_inflections(lemma, pos))
 
 
-def transform_lemma(lemma: str) -> list[str]:
+def transform_lemma(lemma: str) -> set[str]:
     if "(" in lemma:
-        return transform_lemma(re.sub(r"[()]", "", lemma)) + transform_lemma(
+        return transform_lemma(re.sub(r"[()]", "", lemma)) | transform_lemma(
             " ".join(re.sub(r"\([^)]+\)", "", lemma).split())
         )
     elif "/" in lemma:
         words = [word.split("/") for word in lemma.split()]
-        return list(map(" ".join, product(*words)))
+        return set(map(" ".join, product(*words)))
     else:
-        return [lemma]
+        return {lemma}
 
 
 def freq_to_difficulty(word: str, lang: str) -> int:
@@ -148,11 +148,14 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
                     )
             else:
                 tr_forms = translations.get(f"{lemma}_{pos_type}")
-                if tr_forms is None:
+                if tr_forms is None and ("(" in lemma or "/" in lemma):
                     for form in transform_lemma(lemma):
-                        if f"{form}_{pos_type}" in translations:
-                            tr_forms = translations.get(f"{form}_{pos_type}")
-                            break
+                        for check_pos in [pos_type, "other"]:
+                            if f"{form}_{check_pos}" in translations:
+                                tr_forms = translations.get(f"{form}_{check_pos}")
+                                break
+                if tr_forms is None and pos_type != "other":
+                    tr_forms = translations.get(f"{lemma}_other")
                 if tr_forms is not None:
                     unused_indexes = list(range(len(tr_forms)))
                     for index in range(len(tr_forms)):
