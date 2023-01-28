@@ -19,4 +19,3 @@ jobs:
           prerelease: ${{ endsWith(github.ref_name, 'dev') }}
           files: |
             **/*.tar.gz
-            **/kindle_lemmas_dump_*

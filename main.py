@@ -12,7 +12,7 @@ from en.extract_kindle_lemmas import create_kindle_lemmas_db
 from en.translate import translate_english_lemmas
 from extract_wiktionary import create_wiktionary_lemmas_db
 
-VERSION = "0.5.0"
+VERSION = "0.5.0dev"
 MAJOR_VERSION = VERSION.split(".")[0]
 
 
