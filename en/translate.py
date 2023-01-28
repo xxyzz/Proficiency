@@ -45,7 +45,6 @@ def translate_english_lemmas(kaikki_path: Path, target_languages: set[str]) -> N
             if "(" in lemma or "/" in lemma:
                 kindle_lemmas |= transform_lemma(lemma)
 
-
     lang_forms: dict[str, dict[str, list[str]]] = {}
     for target_lang in target_languages:
         with open(f"{target_lang}/forms.json", encoding="utf-8") as f:

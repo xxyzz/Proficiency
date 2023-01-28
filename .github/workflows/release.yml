@@ -16,6 +16,7 @@ jobs:
 
       - uses: softprops/action-gh-release@v1
         with:
+          prerelease: ${{ endsWith(github.ref_name, 'dev') }}
           files: |
             **/*.tar.gz
             **/kindle_lemmas_dump_*
