@@ -105,11 +105,11 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
     conn = sqlite3.Connection(db_path)
     if lang == "en":
         conn.execute(
-            "CREATE TABLE lemmas (sense_id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT DEFAULT '', difficulty INTEGER, example TEXT DEFAULT '', forms TEXT)"
+            "CREATE TABLE lemmas (sense_id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT DEFAULT '', full_def TEXT DEFAULT '', difficulty INTEGER, example TEXT DEFAULT '', forms TEXT)"
         )
     else:
         conn.execute(
-            "CREATE TABLE lemmas (sense_id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT DEFAULT '', difficulty INTEGER, example TEXT DEFAULT '', forms TEXT DEFAULT '', display_lemma_id INTEGER)"
+            "CREATE TABLE lemmas (sense_id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT DEFAULT '', full_def TEXT DEFAULT '', difficulty INTEGER, example TEXT DEFAULT '', forms TEXT DEFAULT '', display_lemma_id INTEGER)"
         )
 
     with open("en/kindle_all_lemmas.csv", newline="") as f:
