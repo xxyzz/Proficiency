@@ -35,9 +35,16 @@ def kaikki_to_kindle_pos(pos: str) -> str:
 
 
 def translate_english_lemmas(kaikki_path: Path, target_languages: set[str]) -> None:
+    from en.extract_kindle_lemmas import transform_lemma
+
     with open("en/kindle_all_lemmas.csv", newline="") as f:
         csv_reader = csv.reader(f)
-        kindle_lemmas = {lemma for lemma, *ignore in csv_reader}
+        kindle_lemmas: set[str] = set()
+        for lemma, *ignore in csv_reader:
+            kindle_lemmas.add(lemma)
+            if "(" in lemma or "/" in lemma:
+                kindle_lemmas |= transform_lemma(lemma)
+
 
     lang_forms: dict[str, dict[str, list[str]]] = {}
     for target_lang in target_languages:
