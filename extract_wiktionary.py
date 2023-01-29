@@ -1,6 +1,4 @@
 import json
-import operator
-import pickle
 import re
 import sqlite3
 import subprocess
