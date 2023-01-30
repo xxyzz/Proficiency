@@ -236,7 +236,7 @@ def create_wiktionary_lemmas_db(
         zh_cn_conn.close()
     if all_forms_data is not None:
         with open(f"{lemma_lang}/forms.json", "w", encoding="utf-8") as f:
-            json.dump(all_forms_data, f, indent=2, ensure_ascii=False)
+            json.dump(all_forms_data, f, ensure_ascii=False)
     return [db_path, zh_cn_db_path] if gloss_lang == "zh" else [db_path]
 
 

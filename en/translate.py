@@ -87,4 +87,4 @@ def translate_english_lemmas(kaikki_path: Path, target_languages: set[str]) -> N
 
         for lang, data in translations.items():
             with open(f"{lang}/translations.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+                json.dump(data, f, ensure_ascii=False)
