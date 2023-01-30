@@ -6,13 +6,11 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from pathlib import Path
 
-from dump_wiktionary import dump_wiktionary
-from en.dump_kindle_lemmas import dump_kindle_lemmas
 from en.extract_kindle_lemmas import create_kindle_lemmas_db
 from en.translate import translate_english_lemmas
 from extract_wiktionary import create_wiktionary_lemmas_db
 
-VERSION = "0.5.0dev"
+VERSION = "0.5.1dev"
 MAJOR_VERSION = VERSION.split(".")[0]
 
 
@@ -26,34 +24,21 @@ def compress(tar_path: Path, files: list[Path]) -> None:
 
 def create_wiktionary_files(lemma_lang: str, gloss_lang: str = "en") -> None:
     db_paths = create_wiktionary_lemmas_db(lemma_lang, gloss_lang, MAJOR_VERSION)
-    dump_path = Path(
-        f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_dump_v{MAJOR_VERSION}"
-    )
-    dump_wiktionary(lemma_lang, db_paths[0], dump_path)
     compress(
         Path(f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.tar.gz"),
-        [db_paths[0], dump_path],
+        db_paths[:1],
     )
     if gloss_lang == "zh":
-        zh_cn_dump_path = Path(
-            f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_dump_v{MAJOR_VERSION}"
-        )
-        dump_wiktionary(lemma_lang, db_paths[1], zh_cn_dump_path)
         compress(
             Path(f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.tar.gz"),
-            [db_paths[1], zh_cn_dump_path],
+            db_paths[1:],
         )
 
 
 def create_kindle_files(lemma_lang: str, kaikki_json_path: Path = Path()) -> None:
     db_path = Path(f"{lemma_lang}/kindle_{lemma_lang}_en_v{MAJOR_VERSION}.db")
-    dump_path = Path(f"{lemma_lang}/kindle_{lemma_lang}_en_dump_v{MAJOR_VERSION}")
     create_kindle_lemmas_db(lemma_lang, kaikki_json_path, db_path)
-    dump_kindle_lemmas(lemma_lang in ["zh", "ja", "ko"], db_path, dump_path)
-    compress(
-        Path(f"{lemma_lang}/kindle_{lemma_lang}_en_v{VERSION}.tar.gz"),
-        [db_path, dump_path],
-    )
+    compress(Path(f"{lemma_lang}/kindle_{lemma_lang}_en_v{VERSION}.tar.gz"), [db_path])
 
 
 def main() -> None:

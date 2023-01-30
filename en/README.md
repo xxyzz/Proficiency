@@ -47,5 +47,3 @@ lemma,pos,sense_id,display_lemma_id
 ## Dependencies
 
 - [lemminflect](https://github.com/bjascob/LemmInflect)
-
-- [flashtext](https://github.com/vi3k6i5/flashtext)
