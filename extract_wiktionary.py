@@ -222,7 +222,11 @@ def create_wiktionary_lemmas_db(
                     )
                 enabled = False
 
-    lemma_index_sql = "CREATE INDEX idx_lemmas_lemma ON lemmas (lemma)"
+    lemma_index_sql = (
+        "CREATE INDEX idx_lemmas ON lemmas (lemma, pos_type)"
+        if lemma_lang != "zh"
+        else "CREATE INDEX idx_lemmas ON lemmas (lemma, pos_type, forms)"
+    )
     conn.execute(lemma_index_sql)
     conn.commit()
     conn.close()

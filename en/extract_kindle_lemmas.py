@@ -86,16 +86,16 @@ def freq_to_difficulty(word: str, lang: str) -> int:
         return 1
 
 
-def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
-    is_cjk = lang in ["zh", "ja", "ko"]
+def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> None:
+    is_cjk = lemma_lang in ["zh", "ja", "ko"]
     with open("en/kindle_enabled_lemmas.json", encoding="utf-8") as f:
         enabled_lemmas = json.load(f)
     enabled_sense_ids: set[int] = {data[1] for data in enabled_lemmas.values()}
-    if lang != "en":
-        with open(f"{lang}/translations.json", encoding="utf-8") as f:
+    if lemma_lang != "en":
+        with open(f"{lemma_lang}/translations.json", encoding="utf-8") as f:
             translations = json.load(f)
 
-        difficulty_json_path = Path(f"{lang}/difficulty.json")
+        difficulty_json_path = Path(f"{lemma_lang}/difficulty.json")
         if difficulty_json_path.exists():
             with difficulty_json_path.open(encoding="utf-8") as f:
                 difficulty_data = json.load(f)
@@ -103,7 +103,7 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
     if db_path.exists():
         db_path.unlink()
     conn = sqlite3.Connection(db_path)
-    if lang == "en":
+    if lemma_lang == "en":
         conn.execute(
             "CREATE TABLE lemmas (sense_id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT DEFAULT '', full_def TEXT DEFAULT '', difficulty INTEGER, example TEXT DEFAULT '', forms TEXT)"
         )
@@ -120,7 +120,7 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
             display_lemma_id = int(display_lemma_id_str)
             enabled = 1 if sense_id in enabled_sense_ids else 0
 
-            if lang == "en":
+            if lemma_lang == "en":
                 difficulty = enabled_lemmas[lemma][0] if lemma in enabled_lemmas else 1
                 data = (sense_id, enabled, lemma, pos_type, difficulty)
                 if "(" in lemma:  # "(as) good as new"
@@ -169,7 +169,7 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
                     difficulty = (
                         difficulty_data.get(tr_lemma, 1)
                         if difficulty_json_path.exists()
-                        else freq_to_difficulty(tr_lemma, lang)
+                        else freq_to_difficulty(tr_lemma, lemma_lang)
                     )
                     conn.execute(
                         "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty, forms, display_lemma_id) VALUES(?, ?, ?, ?, ?, ?, ?)",
@@ -196,7 +196,11 @@ def create_kindle_lemmas_db(lang: str, klld_path: Path, db_path: Path) -> None:
                         ),
                     )
 
-    conn.execute("CREATE INDEX idx_lemmas_lemma ON lemmas (lemma)")
+    conn.execute(
+        "CREATE INDEX idx_lemmas ON lemmas (lemma, pos_type)"
+        if lemma_lang != "zh"
+        else "CREATE INDEX idx_lemmas ON lemmas (lemma, pos_type, forms)"
+    )
     conn.commit()
     conn.close()
 
