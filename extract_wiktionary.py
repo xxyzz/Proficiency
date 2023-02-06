@@ -185,7 +185,7 @@ def create_wiktionary_lemmas_db(
                     if example and example != "(obsolete)":
                         example_sent = example
                         break
-                short_gloss = short_def(gloss)
+                short_gloss = short_def(gloss, gloss_lang)
                 if not short_gloss:
                     continue
                 ipas = get_ipas(lemma_lang, data.get("sounds", []))
@@ -307,7 +307,7 @@ def get_ipas(lang: str, sounds: list[dict[str, str]]) -> dict[str, str] | str:
     return ipas if ipas else ""
 
 
-def short_def(gloss: str) -> str:
+def short_def(gloss: str, gloss_lang: str) -> str:
     gloss = gloss.removesuffix(".").removesuffix("。")
     gloss = re.sub(
         r"\([^)]+\)|（[^）]+）|〈[^〉]+〉|\[[^]]+\]|［[^］]+］|【[^】]+】|﹝[^﹞]+﹞|「[^」]+」",
@@ -315,7 +315,9 @@ def short_def(gloss: str) -> str:
         gloss,
     )
     gloss = min(re.split(";|；", gloss), key=len)
-    gloss = min(re.split("、|/", gloss), key=len)
+    gloss = min(gloss.split("/"), key=len)
+    if gloss_lang == "zh":
+        gloss = min(gloss.split("、"), key=len)
     return gloss.strip()
 
 
