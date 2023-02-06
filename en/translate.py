@@ -40,7 +40,7 @@ def translate_english_lemmas(kaikki_path: Path, target_languages: set[str]) -> N
     with open("en/kindle_all_lemmas.csv", newline="") as f:
         csv_reader = csv.reader(f)
         kindle_lemmas: set[str] = set()
-        for lemma, *ignore in csv_reader:
+        for lemma, *_ in csv_reader:
             kindle_lemmas.add(lemma)
             if "(" in lemma or "/" in lemma:
                 kindle_lemmas |= transform_lemma(lemma)

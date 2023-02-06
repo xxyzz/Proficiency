@@ -10,7 +10,7 @@ from en.extract_kindle_lemmas import create_kindle_lemmas_db
 from en.translate import translate_english_lemmas
 from extract_wiktionary import create_wiktionary_lemmas_db
 
-VERSION = "0.5.1dev"
+VERSION = "0.5.2dev"
 MAJOR_VERSION = VERSION.split(".")[0]
 
 
@@ -60,7 +60,7 @@ def main() -> None:
 
     with ProcessPoolExecutor() as executor:
         logging.info("Creating Wiktionary files")
-        for ignore in executor.map(
+        for _ in executor.map(
             partial(create_wiktionary_files, gloss_lang=args.gloss_lang),
             args.lemma_lang_codes,
         ):
@@ -72,7 +72,7 @@ def main() -> None:
                 kaikki_json_path, set(args.lemma_lang_codes) - {"en"}
             )
             logging.info("Creating Kindle files")
-            for ignore in executor.map(
+            for _ in executor.map(
                 partial(create_kindle_files, kaikki_json_path=kaikki_json_path),
                 args.lemma_lang_codes,
             ):

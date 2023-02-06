@@ -87,7 +87,6 @@ def freq_to_difficulty(word: str, lang: str) -> int:
 
 
 def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> None:
-    is_cjk = lemma_lang in ["zh", "ja", "ko"]
     with open("en/kindle_enabled_lemmas.json", encoding="utf-8") as f:
         enabled_lemmas = json.load(f)
     enabled_sense_ids: set[int] = {data[1] for data in enabled_lemmas.values()}
@@ -159,7 +158,7 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
                 if tr_forms is not None:
                     unused_indexes = list(range(len(tr_forms)))
                     for index in range(len(tr_forms)):
-                        for ignore in conn.execute(
+                        for _ in conn.execute(
                             "SELECT * FROM lemmas WHERE lemma = ? AND pos_type = ? AND display_lemma_id = ? LIMIT 1",
                             (tr_forms[index][0], pos_type, display_lemma_id),
                         ):

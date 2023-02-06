@@ -27,4 +27,4 @@ jobs:
           mypy .
       - run: |
           python -m pip install pylint
-          pylint --disable=all --enable=E1120,E0601,E0602,W0644,W0632,W0611,W0612 --additional-builtins=_,get_icons,load_translations **/*.py
+          pylint --disable=all --enable=E1120,E0601,E0602,W0644,W0632,W0611,W0612 **/*.py
