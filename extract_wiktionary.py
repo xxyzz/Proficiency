@@ -186,7 +186,7 @@ def create_wiktionary_lemmas_db(
                         example_sent = example
                         break
                 short_gloss = short_def(gloss)
-                if not short_gloss or short_gloss == "of":
+                if not short_gloss:
                     continue
                 ipas = get_ipas(lemma_lang, data.get("sounds", []))
                 insert_lemma(
@@ -314,8 +314,7 @@ def short_def(gloss: str) -> str:
         "",
         gloss,
     )
-    gloss = min(re.split(";|；|。", gloss), key=len)
-    gloss = min(re.split(",|，", gloss), key=len)
+    gloss = min(re.split(";|；", gloss), key=len)
     gloss = min(re.split("、|/", gloss), key=len)
     return gloss.strip()
 
