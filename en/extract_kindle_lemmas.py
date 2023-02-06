@@ -113,9 +113,9 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
         inserted_lemma_pos: set[str] = set()
         for lemma, pos_type, sense_id_str, display_lemma_id_str in csv_reader:
             sense_id = int(sense_id_str)
-            enabled = 1 if sense_id in enabled_sense_ids else 0
 
             if lemma_lang == "en":
+                enabled = 1 if sense_id in enabled_sense_ids else 0
                 lemminflect_pos = kindle_to_lemminflect_pos(pos_type)
                 difficulty = enabled_lemmas[lemma][0] if lemma in enabled_lemmas else 1
                 en_data = (sense_id, enabled, lemma, pos_type, difficulty)
@@ -123,7 +123,6 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
             else:
                 non_en_data = (
                     sense_id,
-                    enabled,
                     lemma,
                     pos_type,
                     int(display_lemma_id_str),
@@ -174,12 +173,12 @@ def insert_en_lemma(
 
 def insert_non_en_lemma(
     conn: sqlite3.Connection,
-    data: tuple[int, int, str, str, int, str],
+    data: tuple[int, str, str, int, str],
     translations: dict[str, list[list[str]]],
     difficulty_data: dict[str, int],
     inserted_lemmas_pos: set[str],
 ) -> None:
-    sense_id, enabled, lemma, pos_type, display_lemma_id, lemma_lang = data
+    sense_id, lemma, pos_type, display_lemma_id, lemma_lang = data
     tr_forms = translations.get(f"{lemma}_{pos_type}")
     if tr_forms is None and ("(" in lemma or "/" in lemma):
         for form in transform_lemma(lemma):
@@ -201,6 +200,13 @@ def insert_non_en_lemma(
             if difficulty_data is not None
             else freq_to_difficulty(tr_lemma, lemma_lang)
         )
+        tr_lemma_pos_en_id = f"{tr_lemma}_{pos_type}_{display_lemma_id}"
+        if (tr_lemma_pos_en_id in inserted_lemmas_pos) or (
+            difficulty_data is not None and tr_lemma not in difficulty_data
+        ):
+            enabled = 0
+        else:
+            enabled = 1
         conn.execute(
             "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty, forms) VALUES(?, ?, ?, ?, ?, ?)",
             (
@@ -212,13 +218,14 @@ def insert_non_en_lemma(
                 ",".join(tr_forms_dict[tr_lemma]),
             ),
         )
-        inserted_lemmas_pos.add(f"{tr_lemma}_{pos_type}_{display_lemma_id}")
+        inserted_lemmas_pos.add(tr_lemma_pos_en_id)
     else:
+        # No translation
         conn.execute(
             "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty) VALUES(?, ?, ?, ?, ?)",
             (
                 sense_id,
-                enabled,
+                0,
                 lemma,
                 pos_type,
                 1,
