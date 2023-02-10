@@ -29,8 +29,6 @@ SPANISH_INFLECTED_GLOSS = (
     r"(?:first|second|third)-person|only used in|gerund combined with"
 )
 USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
-LEMMA_IDS: dict[str, int] = {}
-MAX_LEMMA_ID = 0
 
 
 def download_kaikki_json(lang: str) -> Path:
@@ -136,6 +134,8 @@ def create_wiktionary_lemmas_db(
     all_forms_data: dict[str, list[str]] | None = (
         defaultdict(list) if lemma_lang != "en" and gloss_lang == "en" else None
     )
+    max_lemma_id = 0
+    lemma_ids: dict[str, int] = {}
 
     with open(kaikki_json_path, encoding="utf-8") as f:
         for line in f:
@@ -215,15 +215,21 @@ def create_wiktionary_lemmas_db(
                     )
                 enabled = False
 
-            ipas = get_ipas(lemma_lang, data.get("sounds", []))
             if sense_data:
-                lemma_id = insert_lemma(word, lemma_lang, gloss_lang, ipas, conn)
+                ipas = get_ipas(lemma_lang, data.get("sounds", []))
+                lemma_id, max_lemma_id = insert_lemma(
+                    word,
+                    lemma_lang,
+                    ipas,
+                    lemma_ids,
+                    max_lemma_id,
+                    [conn, zh_cn_conn] if gloss_lang == "zh" else [conn],
+                )
                 insert_forms(conn, forms, pos, lemma_id)
-                insert_sense(conn, sense_data, lemma_id, pos, difficulty)
+                insert_senses(conn, sense_data, lemma_id, pos, difficulty)
                 if gloss_lang == "zh":
-                    insert_lemma(word, lemma_lang, gloss_lang, ipas, zh_cn_conn)
                     insert_forms(zh_cn_conn, forms, pos, lemma_id)
-                    insert_sense(
+                    insert_senses(
                         zh_cn_conn, zh_cn_sense_data, lemma_id, pos, difficulty
                     )
 
@@ -247,19 +253,22 @@ def create_wiktionary_lemmas_db(
 def insert_lemma(
     lemma: str,
     lemma_lang: str,
-    gloss_lang: str,
     ipas: dict[str, str] | str,
-    conn: sqlite3.Connection,
-) -> int:
-    global MAX_LEMMA_ID
-    if lemma in LEMMA_IDS:
-        lemma_id = LEMMA_IDS[lemma]
-        if gloss_lang != "zh":
-            return lemma_id
+    lemma_ids: dict[str, int],
+    max_lemma_id: int,
+    conn_list: list[sqlite3.Connection],
+) -> tuple[int, int]:
+    if lemma in lemma_ids:
+        return lemma_ids[lemma], max_lemma_id
+
+    lemma_id = max_lemma_id
+    lemma_ids[lemma] = lemma_id
+    max_lemma_id += 1
+
+    if lemma_lang in ["en", "zh"]:
+        sql = "INSERT INTO lemmas VALUES(?, ?, ?, ?)"
     else:
-        lemma_id = MAX_LEMMA_ID
-        MAX_LEMMA_ID += 1
-        LEMMA_IDS[lemma] = lemma_id
+        sql = "INSERT INTO lemmas VALUES(?, ?, ?)"
 
     if lemma_lang == "en":
         ipas_data = (
@@ -267,27 +276,21 @@ def insert_lemma(
             if type(ipas) == dict
             else (ipas, "")
         )
-        conn.execute(
-            "INSERT OR IGNORE INTO lemmas (id, lemma, ga_ipa, rp_ipa) VALUES(?, ?, ?, ?)",
-            (lemma_id, lemma) + ipas_data,
-        )
+        data = (lemma_id, lemma) + ipas_data
     elif lemma_lang == "zh":
         ipas_data = (
             (ipas.get("pinyin", ""), ipas.get("bopomofo", ""))
             if type(ipas) == dict
             else (ipas, "")
         )
-        conn.execute(
-            "INSERT OR IGNORE INTO lemmas (id, lemma, pinyin, bopomofo) VALUES(?, ?, ?, ?)",
-            (lemma_id, lemma) + ipas_data,
-        )
+        data = (lemma_id, lemma) + ipas_data
     else:
-        conn.execute(
-            "INSERT OR IGNORE INTO lemmas (id, lemma, ipa) VALUES(?, ?, ?)",
-            (lemma_id, lemma) + (ipas,),
-        )
+        data = (lemma_id, lemma, ipas)  # type: ignore
 
-    return lemma_id
+    for conn in conn_list:
+        conn.execute(sql, data)
+
+    return lemma_id, max_lemma_id
 
 
 def insert_forms(
@@ -299,12 +302,12 @@ def insert_forms(
     )
 
 
-def insert_sense(
-    conn: sqlite3.Connection, data: Any, lemma_id: int, pos: str, difficulty: int
+def insert_senses(
+    conn: sqlite3.Connection, data_list: Any, lemma_id: int, pos: str, difficulty: int
 ) -> None:
     conn.executemany(
         "INSERT INTO senses (enabled, short_def, full_def, example, lemma_id, pos, difficulty) VALUES(?, ?, ?, ?, ?, ?, ?)",
-        (d + (lemma_id, pos, difficulty) for d in data),
+        (data + (lemma_id, pos, difficulty) for data in data_list),
     )
 
 
