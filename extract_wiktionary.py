@@ -217,10 +217,12 @@ def create_wiktionary_lemmas_db(
 
             ipas = get_ipas(lemma_lang, data.get("sounds", []))
             if sense_data:
-                lemma_id = insert_lemma(word, lemma_lang, ipas, conn)
+                lemma_id = insert_lemma(word, lemma_lang, gloss_lang, ipas, conn)
                 insert_forms(conn, forms, pos, lemma_id)
                 insert_sense(conn, sense_data, lemma_id, pos, difficulty)
                 if gloss_lang == "zh":
+                    insert_lemma(word, lemma_lang, gloss_lang, ipas, zh_cn_conn)
+                    insert_forms(zh_cn_conn, forms, pos, lemma_id)
                     insert_sense(
                         zh_cn_conn, zh_cn_sense_data, lemma_id, pos, difficulty
                     )
@@ -243,15 +245,21 @@ def create_wiktionary_lemmas_db(
 
 
 def insert_lemma(
-    lemma: str, lemma_lang: str, ipas: dict[str, str] | str, conn: sqlite3.Connection
+    lemma: str,
+    lemma_lang: str,
+    gloss_lang: str,
+    ipas: dict[str, str] | str,
+    conn: sqlite3.Connection,
 ) -> int:
     global MAX_LEMMA_ID
     if lemma in LEMMA_IDS:
-        return LEMMA_IDS[lemma]
-
-    lemma_id = MAX_LEMMA_ID
-    MAX_LEMMA_ID += 1
-    LEMMA_IDS[lemma] = lemma_id
+        lemma_id = LEMMA_IDS[lemma]
+        if gloss_lang != "zh":
+            return lemma_id
+    else:
+        lemma_id = MAX_LEMMA_ID
+        MAX_LEMMA_ID += 1
+        LEMMA_IDS[lemma] = lemma_id
 
     if lemma_lang == "en":
         ipas_data = (
@@ -260,7 +268,7 @@ def insert_lemma(
             else (ipas, "")
         )
         conn.execute(
-            "INSERT INTO lemmas (id, lemma, ga_ipa, rp_ipa) VALUES(?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO lemmas (id, lemma, ga_ipa, rp_ipa) VALUES(?, ?, ?, ?)",
             (lemma_id, lemma) + ipas_data,
         )
     elif lemma_lang == "zh":
@@ -270,12 +278,12 @@ def insert_lemma(
             else (ipas, "")
         )
         conn.execute(
-            "INSERT INTO lemmas (id, lemma, pinyin, bopomofo) VALUES(?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO lemmas (id, lemma, pinyin, bopomofo) VALUES(?, ?, ?, ?)",
             (lemma_id, lemma) + ipas_data,
         )
     else:
         conn.execute(
-            "INSERT INTO lemmas (id, lemma, ipa) VALUES(?, ?, ?)",
+            "INSERT OR IGNORE INTO lemmas (id, lemma, ipa) VALUES(?, ?, ?)",
             (lemma_id, lemma) + (ipas,),
         )
 
