@@ -6,6 +6,9 @@ import sys
 from itertools import chain, product
 from pathlib import Path
 
+LEMMA_IDS: dict[str, int] = {}
+MAX_LEMMA_ID = 0
+
 
 def kindle_to_lemminflect_pos(pos: str) -> str | None:
     # https://lemminflect.readthedocs.io/en/latest/tags
@@ -104,8 +107,13 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
     if db_path.exists():
         db_path.unlink()
     conn = sqlite3.Connection(db_path)
-    conn.execute(
-        "CREATE TABLE lemmas (sense_id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT DEFAULT '', full_def TEXT DEFAULT '', difficulty INTEGER, example TEXT DEFAULT '', forms TEXT DEFAULT '')"
+    conn.executescript(
+        """
+    PRAGMA foreign_keys = ON;
+    CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT);
+    CREATE TABLE forms (form TEXT, pos TEXT, lemma_id INTEGER, PRIMARY KEY(form, pos, lemma_id), FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
+    CREATE TABLE senses (id INTEGER PRIMARY KEY, enabled INTEGER, lemma_id INTEGER, pos TEXT, short_def TEXT DEFAULT '', full_def TEXT DEFAULT '', difficulty INTEGER, FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
+    """
     )
 
     with open("en/kindle_all_lemmas.csv", newline="") as f:
@@ -118,8 +126,8 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
                 enabled = 1 if sense_id in enabled_sense_ids else 0
                 lemminflect_pos = kindle_to_lemminflect_pos(pos_type)
                 difficulty = enabled_lemmas[lemma][0] if lemma in enabled_lemmas else 1
-                en_data = (sense_id, enabled, lemma, pos_type, difficulty)
-                insert_en_lemma(conn, lemma, en_data, lemminflect_pos)
+                en_data = (sense_id, enabled, pos_type, difficulty)
+                insert_en_data(conn, lemma, en_data, lemminflect_pos)
             else:
                 non_en_data = (
                     sense_id,
@@ -128,108 +136,123 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
                     int(display_lemma_id_str),
                     lemma_lang,
                 )
-                insert_non_en_lemma(
+                insert_non_en_data(
                     conn, non_en_data, translations, difficulty_data, inserted_lemma_pos
                 )
 
-    conn.execute(
-        "CREATE INDEX idx_lemmas ON lemmas (lemma, pos_type)"
-        if lemma_lang != "zh"
-        else "CREATE INDEX idx_lemmas ON lemmas (lemma, pos_type, forms)"
+    conn.executescript(
+        """
+    CREATE INDEX idx_lemmas ON lemmas (lemma);
+    CREATE INDEX idx_senses ON senses (lemma_id, pos);
+    """
     )
     conn.commit()
     conn.close()
 
 
-def insert_en_lemma(
+def insert_lemma(conn: sqlite3.Connection, lemma: str) -> int:
+    global MAX_LEMMA_ID
+    if lemma in LEMMA_IDS:
+        return LEMMA_IDS[lemma]
+
+    lemma_id = MAX_LEMMA_ID
+    LEMMA_IDS[lemma] = lemma_id
+    MAX_LEMMA_ID += 1
+    conn.execute("INSERT INTO lemmas VALUES(?, ?)", (lemma_id, lemma))
+    return lemma_id
+
+
+def insert_en_data(
     conn: sqlite3.Connection,
     lemma: str,
-    data: tuple[int, int, str, str, int],
-    pos: str | None,
+    data: tuple[int, int, str, int],
+    lemminflect_pos: str | None,
 ) -> None:
+    lemma_id = insert_lemma(conn, lemma)
+    conn.execute(
+        "INSERT INTO senses (id, enabled, pos, difficulty, lemma_id) VALUES(?, ?, ?, ?, ?)",
+        data + (lemma_id,),
+    )
+    pos = data[2]
     if "(" in lemma:  # "(as) good as new"
         forms_with_words_in_parentheses = get_en_lemma_forms(
-            re.sub(r"[()]", "", lemma), pos
+            re.sub(r"[()]", "", lemma), lemminflect_pos
         )
         forms_without_words_in_parentheses = get_en_lemma_forms(
             " ".join(re.sub(r"\([^)]+\)", "", lemma).split()),
-            pos,
+            lemminflect_pos,
         )
-        conn.execute(
-            "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty, forms) VALUES(?, ?, ?, ?, ?, ?)",
-            data
-            + (
-                ",".join(
-                    forms_with_words_in_parentheses | forms_without_words_in_parentheses
-                ),
+        conn.executemany(
+            "INSERT OR IGNORE INTO forms VALUES(?, ?, ?)",
+            (
+                (form, pos, lemma_id)
+                for form in forms_with_words_in_parentheses
+                | forms_without_words_in_parentheses
             ),
         )
     else:
-        conn.execute(
-            "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty, forms) VALUES(?, ?, ?, ?, ?, ?)",
-            data + (",".join(get_en_lemma_forms(lemma, pos)),),
+        conn.executemany(
+            "INSERT OR IGNORE INTO forms VALUES(?, ?, ?)",
+            (
+                (form, pos, lemma_id)
+                for form in get_en_lemma_forms(lemma, lemminflect_pos)
+            ),
         )
 
 
-def insert_non_en_lemma(
+def insert_non_en_data(
     conn: sqlite3.Connection,
     data: tuple[int, str, str, int, str],
     translations: dict[str, list[list[str]]],
     difficulty_data: dict[str, int],
     inserted_lemmas_pos: set[str],
 ) -> None:
-    sense_id, lemma, pos_type, display_lemma_id, lemma_lang = data
-    tr_forms = translations.get(f"{lemma}_{pos_type}")
+    sense_id, lemma, pos, display_lemma_id, lemma_lang = data
+    tr_forms = translations.get(f"{lemma}_{pos}")
     if tr_forms is None and ("(" in lemma or "/" in lemma):
         for form in transform_lemma(lemma):
-            for check_pos in [pos_type, "other"]:
+            for check_pos in [pos, "other"]:
                 if f"{form}_{check_pos}" in translations:
                     tr_forms = translations.get(f"{form}_{check_pos}")
                     break
-    if tr_forms is None and pos_type != "other":
+    if tr_forms is None and pos != "other":
         tr_forms = translations.get(f"{lemma}_other")
     if tr_forms is not None:
         tr_forms_dict = {forms[0]: forms[1:] for forms in tr_forms}
         tr_lemma = tr_forms[0][0]
         for test_lemma in tr_forms_dict.keys():
-            if f"{test_lemma}_{pos_type}_{display_lemma_id}" not in inserted_lemmas_pos:
+            if f"{test_lemma}_{pos}_{display_lemma_id}" not in inserted_lemmas_pos:
                 tr_lemma = test_lemma
                 break
+        lemma_id = insert_lemma(conn, tr_lemma)
         difficulty = (
             difficulty_data.get(tr_lemma, 1)
             if difficulty_data is not None
             else freq_to_difficulty(tr_lemma, lemma_lang)
         )
-        tr_lemma_pos_en_id = f"{tr_lemma}_{pos_type}_{display_lemma_id}"
+        tr_lemma_pos_en_id = f"{tr_lemma}_{pos}_{display_lemma_id}"
         if (tr_lemma_pos_en_id in inserted_lemmas_pos) or (
             difficulty_data is not None and tr_lemma not in difficulty_data
         ):
             enabled = 0
         else:
             enabled = 1
+
+        conn.executemany(
+            "INSERT OR IGNORE INTO forms VALUES(?, ?, ?)",
+            ((form, pos, lemma_id) for form in tr_forms_dict[tr_lemma]),
+        )
         conn.execute(
-            "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty, forms) VALUES(?, ?, ?, ?, ?, ?)",
-            (
-                sense_id,
-                enabled,
-                tr_lemma,
-                pos_type,
-                difficulty,
-                ",".join(tr_forms_dict[tr_lemma]),
-            ),
+            "INSERT INTO senses (id, enabled, lemma_id, pos, difficulty)",
+            (sense_id, enabled, lemma_id, pos, difficulty),
         )
         inserted_lemmas_pos.add(tr_lemma_pos_en_id)
     else:
         # No translation
+        lemma_id = insert_lemma(conn, lemma)
         conn.execute(
-            "INSERT INTO lemmas (sense_id, enabled, lemma, pos_type, difficulty) VALUES(?, ?, ?, ?, ?)",
-            (
-                sense_id,
-                0,
-                lemma,
-                pos_type,
-                1,
-            ),
+            "INSERT INTO senses (id, enabled, lemma_id, pos, difficulty)",
+            (sense_id, 0, lemma_id, pos, 1),
         )
 
 

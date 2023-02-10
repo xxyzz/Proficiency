@@ -29,6 +29,8 @@ SPANISH_INFLECTED_GLOSS = (
     r"(?:first|second|third)-person|only used in|gerund combined with"
 )
 USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
+LEMMA_IDS: dict[str, int] = {}
+MAX_LEMMA_ID = 0
 
 
 def download_kaikki_json(lang: str) -> Path:
@@ -85,6 +87,30 @@ def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
     return kaikki_json_path, difficulty_data
 
 
+def init_db(db_path: Path, lemma_lang: str) -> sqlite3.Connection:
+    if not db_path.parent.is_dir():
+        db_path.parent.mkdir()
+    if db_path.exists():
+        db_path.unlink()
+    conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA foreign_keys = ON")
+    if lemma_lang == "en":
+        create_lemmas_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT, ga_ipa TEXT, rp_ipa TEXT)"
+    elif lemma_lang == "zh":
+        create_lemmas_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT, pinyin TEXT, bopomofo TEXT)"
+    else:
+        create_lemmas_table_sql = (
+            "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT, ipa TEXT)"
+        )
+    conn.execute(create_lemmas_table_sql)
+    create_other_tables_sql = """
+    CREATE TABLE forms (form TEXT, pos TEXT, lemma_id INTEGER, PRIMARY KEY(form, pos, lemma_id), FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
+    CREATE TABLE senses (id INTEGER PRIMARY KEY, enabled INTEGER, lemma_id INTEGER, pos TEXT, short_def TEXT, full_def TEXT, example TEXT, difficulty INTEGER, FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
+    """
+    conn.executescript(create_other_tables_sql)
+    return conn
+
+
 def create_wiktionary_lemmas_db(
     lemma_lang: str, gloss_lang: str, major_version: str
 ) -> list[Path]:
@@ -93,28 +119,14 @@ def create_wiktionary_lemmas_db(
     db_path = Path(
         f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{major_version}.db"
     )
-    if not db_path.parent.is_dir():
-        db_path.parent.mkdir()
-    if db_path.exists():
-        db_path.unlink()
-    if lemma_lang == "en":
-        create_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT, full_def TEXT, difficulty INTEGER, forms TEXT, example TEXT, ga_ipa TEXT, rp_ipa TEXT)"
-    elif lemma_lang == "zh":
-        create_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT, full_def TEXT, difficulty INTEGER, forms TEXT, example TEXT, pinyin TEXT, bopomofo TEXT)"
-    else:
-        create_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, enabled INTEGER, lemma TEXT, pos_type TEXT, short_def TEXT, full_def TEXT, difficulty INTEGER, forms TEXT, example TEXT, ipa TEXT)"
-    conn = sqlite3.connect(db_path)
-    conn.execute(create_table_sql)
+    conn = init_db(db_path, lemma_lang)
     if gloss_lang == "zh":
         zh_cn_db_path = Path(
             f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{major_version}.db"
         )
-        if zh_cn_db_path.exists():
-            zh_cn_db_path.unlink()
-        zh_cn_conn = sqlite3.connect(zh_cn_db_path)
-        zh_cn_conn.execute(create_table_sql)
+        zh_cn_conn = init_db(zh_cn_db_path, lemma_lang)
 
-    enabled_words_pos = set()
+    enabled_words_pos: set[str] = set()
     len_limit = 2 if lemma_lang in ["zh", "ja", "ko"] else 3
     if lemma_lang == "zh" or gloss_lang == "zh":
         import opencc
@@ -163,6 +175,9 @@ def create_wiktionary_lemmas_db(
                     list(forms)
                 )
 
+            sense_data = []
+            zh_cn_sense_data = []
+
             for sense in data.get("senses", []):
                 examples = sense.get("examples", [])
                 glosses = sense.get("glosses")
@@ -185,53 +200,40 @@ def create_wiktionary_lemmas_db(
                     if example and example != "(obsolete)":
                         example_sent = example
                         break
-                short_gloss = short_def(gloss, gloss_lang)
+                short_gloss = get_short_def(gloss, gloss_lang)
                 if not short_gloss:
                     continue
-                ipas = get_ipas(lemma_lang, data.get("sounds", []))
-                insert_lemma(
-                    lemma_lang,
-                    conn,
-                    (
-                        enabled,
-                        word,
-                        pos,
-                        short_gloss,
-                        gloss,
-                        difficulty,
-                        ",".join(forms),
-                        example_sent,
-                    ),
-                    ipas,
-                )
+                sense_data.append((enabled, short_gloss, gloss, example_sent))
                 if gloss_lang == "zh":
-                    insert_lemma(
-                        lemma_lang,
-                        zh_cn_conn,
+                    zh_cn_sense_data.append(
                         (
                             enabled,
-                            word,
-                            pos,
                             converter.convert(short_gloss),
                             converter.convert(gloss),
-                            difficulty,
-                            ",".join(forms),
                             converter.convert(example_sent) if example_sent else "",
-                        ),
-                        ipas,
+                        )
                     )
                 enabled = False
 
-    lemma_index_sql = (
-        "CREATE INDEX idx_lemmas ON lemmas (lemma, pos_type)"
-        if lemma_lang != "zh"
-        else "CREATE INDEX idx_lemmas ON lemmas (lemma, pos_type, forms)"
-    )
-    conn.execute(lemma_index_sql)
+            ipas = get_ipas(lemma_lang, data.get("sounds", []))
+            if sense_data:
+                lemma_id = insert_lemma(word, lemma_lang, ipas, conn)
+                insert_forms(conn, forms, pos, lemma_id)
+                insert_sense(conn, sense_data, lemma_id, pos, difficulty)
+                if gloss_lang == "zh":
+                    insert_sense(
+                        zh_cn_conn, zh_cn_sense_data, lemma_id, pos, difficulty
+                    )
+
+    create_indexes_sql = """
+    CREATE INDEX idx_lemmas ON lemmas (lemma);
+    CREATE INDEX idx_senses ON senses (lemma_id, pos);
+    """
+    conn.executescript(create_indexes_sql)
     conn.commit()
     conn.close()
     if gloss_lang == "zh":
-        zh_cn_conn.execute(lemma_index_sql)
+        zh_cn_conn.executescript(create_indexes_sql)
         zh_cn_conn.commit()
         zh_cn_conn.close()
     if all_forms_data is not None:
@@ -241,8 +243,16 @@ def create_wiktionary_lemmas_db(
 
 
 def insert_lemma(
-    lemma_lang: str, conn: sqlite3.Connection, data: Any, ipas: dict[str, str] | str
-) -> None:
+    lemma: str, lemma_lang: str, ipas: dict[str, str] | str, conn: sqlite3.Connection
+) -> int:
+    global MAX_LEMMA_ID
+    if lemma in LEMMA_IDS:
+        return LEMMA_IDS[lemma]
+
+    lemma_id = MAX_LEMMA_ID
+    MAX_LEMMA_ID += 1
+    LEMMA_IDS[lemma] = lemma_id
+
     if lemma_lang == "en":
         ipas_data = (
             (ipas.get("ga_ipa", ""), ipas.get("rp_ipa", ""))
@@ -250,8 +260,8 @@ def insert_lemma(
             else (ipas, "")
         )
         conn.execute(
-            "INSERT INTO lemmas (enabled, lemma, pos_type, short_def, full_def, difficulty, forms, example, ga_ipa, rp_ipa) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            data + ipas_data,
+            "INSERT INTO lemmas (id, lemma, ga_ipa, rp_ipa) VALUES(?, ?, ?, ?)",
+            (lemma_id, lemma) + ipas_data,
         )
     elif lemma_lang == "zh":
         ipas_data = (
@@ -260,14 +270,34 @@ def insert_lemma(
             else (ipas, "")
         )
         conn.execute(
-            "INSERT INTO lemmas (enabled, lemma, pos_type, short_def, full_def, difficulty, forms, example, pinyin, bopomofo) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            data + ipas_data,
+            "INSERT INTO lemmas (id, lemma, pinyin, bopomofo) VALUES(?, ?, ?, ?)",
+            (lemma_id, lemma) + ipas_data,
         )
     else:
         conn.execute(
-            "INSERT INTO lemmas (enabled, lemma, pos_type, short_def, full_def, difficulty, forms, example, ipa) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            data + (ipas,),
+            "INSERT INTO lemmas (id, lemma, ipa) VALUES(?, ?, ?)",
+            (lemma_id, lemma) + (ipas,),
         )
+
+    return lemma_id
+
+
+def insert_forms(
+    conn: sqlite3.Connection, forms: set[str], pos: str, lemma_id: int
+) -> None:
+    conn.executemany(
+        "INSERT OR IGNORE INTO forms VALUES(?, ?, ?)",
+        ((form, pos, lemma_id) for form in forms),
+    )
+
+
+def insert_sense(
+    conn: sqlite3.Connection, data: Any, lemma_id: int, pos: str, difficulty: int
+) -> None:
+    conn.executemany(
+        "INSERT INTO senses (enabled, short_def, full_def, example, lemma_id, pos, difficulty) VALUES(?, ?, ?, ?, ?, ?, ?)",
+        (d + (lemma_id, pos, difficulty) for d in data),
+    )
 
 
 def get_ipas(lang: str, sounds: list[dict[str, str]]) -> dict[str, str] | str:
@@ -307,7 +337,7 @@ def get_ipas(lang: str, sounds: list[dict[str, str]]) -> dict[str, str] | str:
     return ipas if ipas else ""
 
 
-def short_def(gloss: str, gloss_lang: str) -> str:
+def get_short_def(gloss: str, gloss_lang: str) -> str:
     gloss = gloss.removesuffix(".").removesuffix("。")
     gloss = re.sub(
         r"\([^)]+\)|（[^）]+）|〈[^〉]+〉|\[[^]]+\]|［[^］]+］|【[^】]+】|﹝[^﹞]+﹞|「[^」]+」",
