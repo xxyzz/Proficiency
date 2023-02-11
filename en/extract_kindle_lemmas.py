@@ -107,8 +107,8 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
     conn.executescript(
         """
     PRAGMA foreign_keys = ON;
-    CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT);
-    CREATE TABLE forms (form TEXT, pos TEXT, lemma_id INTEGER, PRIMARY KEY(form, pos, lemma_id), FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
+    CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT COLLATE NOCASE);
+    CREATE TABLE forms (form TEXT COLLATE NOCASE, pos TEXT, lemma_id INTEGER, PRIMARY KEY(form, pos, lemma_id), FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
     CREATE TABLE senses (id INTEGER PRIMARY KEY, enabled INTEGER, lemma_id INTEGER, pos TEXT, short_def TEXT DEFAULT '', full_def TEXT DEFAULT '', example TEXT DEFAULT '', difficulty INTEGER, FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
     """
     )

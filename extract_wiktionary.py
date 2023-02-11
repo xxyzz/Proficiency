@@ -93,16 +93,14 @@ def init_db(db_path: Path, lemma_lang: str) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA foreign_keys = ON")
     if lemma_lang == "en":
-        create_lemmas_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT, ga_ipa TEXT, rp_ipa TEXT)"
+        create_lemmas_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT COLLATE NOCASE, ga_ipa TEXT, rp_ipa TEXT)"
     elif lemma_lang == "zh":
-        create_lemmas_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT, pinyin TEXT, bopomofo TEXT)"
+        create_lemmas_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT COLLATE NOCASE, pinyin TEXT, bopomofo TEXT)"
     else:
-        create_lemmas_table_sql = (
-            "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT, ipa TEXT)"
-        )
+        create_lemmas_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT COLLATE NOCASE, ipa TEXT)"
     conn.execute(create_lemmas_table_sql)
     create_other_tables_sql = """
-    CREATE TABLE forms (form TEXT, pos TEXT, lemma_id INTEGER, PRIMARY KEY(form, pos, lemma_id), FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
+    CREATE TABLE forms (form TEXT COLLATE NOCASE, pos TEXT, lemma_id INTEGER, PRIMARY KEY(form, pos, lemma_id), FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
     CREATE TABLE senses (id INTEGER PRIMARY KEY, enabled INTEGER, lemma_id INTEGER, pos TEXT, short_def TEXT, full_def TEXT, example TEXT, difficulty INTEGER, FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
     """
     conn.executescript(create_other_tables_sql)
