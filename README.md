@@ -16,6 +16,8 @@ English Wiktionary extracted data come from kaikki.org, Chinese Wiktionary data 
 
 - [wordfreq](https://github.com/rspeer/wordfreq): get word frequency data
 
+- [wiktextract-lemmatization](https://github.com/Vuizur/wiktextract-lemmatization): remove [stress](https://en.wikipedia.org/wiki/Stress_(linguistics))
+
 ## Create files
 
 ```

@@ -378,6 +378,8 @@ def get_forms(
     pos: str,
     len_limit: int,
 ) -> set[str]:
+    from wiktextract_lemmatization.utils import FORM_TAGS_TO_IGNORE, remove_accents
+
     forms: set[str] = set()
     if lemma_lang == "en" and gloss_lang == "zh":
         # Extracted Chinese Wiktionary forms data are not usable yet
@@ -388,6 +390,17 @@ def get_forms(
             if find_forms:
                 forms = find_forms
     else:
+        if lemma_lang in ["de", "da"]:  # German, Danish
+            forms_data = [
+                data
+                for data in forms_data
+                if "tags" not in data
+                or (
+                    "tags" in data
+                    and not any(tag in FORM_TAGS_TO_IGNORE for tag in data["tags"])
+                )
+            ]
+
         for form in map(lambda x: x.get("form", ""), forms_data):
             if gloss_lang == "zh" and (
                 form.startswith("Category:") or len(form) / len(word) > 2
@@ -397,4 +410,6 @@ def get_forms(
             if form and form != word and len(form) >= len_limit:
                 forms.add(form)
 
+    if lemma_lang in ["ru", "uk"]:  # Russian, Ukrainian
+        forms |= {remove_accents(form) for form in forms}
     return forms
