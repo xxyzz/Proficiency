@@ -132,7 +132,6 @@ def create_wiktionary_lemmas_db(
     all_forms_data: dict[str, list[str]] | None = (
         defaultdict(list) if lemma_lang != "en" and gloss_lang == "en" else None
     )
-    max_lemma_id = 0
     lemma_ids: dict[str, int] = {}
 
     with open(kaikki_json_path, encoding="utf-8") as f:
@@ -215,12 +214,11 @@ def create_wiktionary_lemmas_db(
 
             if sense_data:
                 ipas = get_ipas(lemma_lang, data.get("sounds", []))
-                lemma_id, max_lemma_id = insert_lemma(
+                lemma_id = insert_lemma(
                     word,
                     lemma_lang,
                     ipas,
                     lemma_ids,
-                    max_lemma_id,
                     [conn, zh_cn_conn] if gloss_lang == "zh" else [conn],
                 )
                 insert_forms(conn, forms, pos, lemma_id)
@@ -253,20 +251,19 @@ def insert_lemma(
     lemma_lang: str,
     ipas: dict[str, str] | str,
     lemma_ids: dict[str, int],
-    max_lemma_id: int,
     conn_list: list[sqlite3.Connection],
-) -> tuple[int, int]:
+) -> int:
     if lemma in lemma_ids:
-        return lemma_ids[lemma], max_lemma_id
+        return lemma_ids[lemma]
 
-    lemma_id = max_lemma_id
-    lemma_ids[lemma] = lemma_id
-    max_lemma_id += 1
-
-    if lemma_lang in ["en", "zh"]:
-        sql = "INSERT INTO lemmas VALUES(?, ?, ?, ?)"
+    if lemma_lang == "en":
+        sql = "INSERT INTO lemmas (lemma, ga_ipa, rp_ipa) VALUES(?, ?, ?) RETURNING id"
+    elif lemma_lang == "zh":
+        sql = (
+            "INSERT INTO lemmas (lemma, pinyin, bopomofo) VALUES(?, ?, ?) RETURNING id"
+        )
     else:
-        sql = "INSERT INTO lemmas VALUES(?, ?, ?)"
+        sql = "INSERT INTO lemmas (lemma, ipa) VALUES(?, ?) RETURNING id"
 
     if lemma_lang == "en":
         ipas_data = (
@@ -274,21 +271,23 @@ def insert_lemma(
             if type(ipas) == dict
             else (ipas, "")
         )
-        data = (lemma_id, lemma) + ipas_data
+        data = (lemma,) + ipas_data
     elif lemma_lang == "zh":
         ipas_data = (
             (ipas.get("pinyin", ""), ipas.get("bopomofo", ""))
             if type(ipas) == dict
             else (ipas, "")
         )
-        data = (lemma_id, lemma) + ipas_data
+        data = (lemma,) + ipas_data
     else:
-        data = (lemma_id, lemma, ipas)  # type: ignore
+        data = (lemma, ipas)  # type: ignore
 
+    lemma_id = 0
     for conn in conn_list:
-        conn.execute(sql, data)
-
-    return lemma_id, max_lemma_id
+        for (new_lemma_id,) in conn.execute(sql, data):
+            lemma_id = new_lemma_id
+    lemma_ids[lemma] = lemma_id
+    return lemma_id
 
 
 def insert_forms(

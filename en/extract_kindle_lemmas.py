@@ -115,7 +115,6 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
 
     with open("en/kindle_all_lemmas.csv", newline="") as f:
         csv_reader = csv.reader(f)
-        max_lemma_id = 0
         lemma_ids: dict[str, int] = {}
         inserted_lemma_pos: set[str] = set()
         for lemma, pos_type, sense_id_str, display_lemma_id_str in csv_reader:
@@ -126,9 +125,7 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
                 lemminflect_pos = kindle_to_lemminflect_pos(pos_type)
                 difficulty = enabled_lemmas[lemma][0] if lemma in enabled_lemmas else 1
                 en_data = (sense_id, enabled, pos_type, difficulty)
-                max_lemma_id = insert_en_data(
-                    conn, lemma, en_data, lemminflect_pos, lemma_ids, max_lemma_id
-                )
+                insert_en_data(conn, lemma, en_data, lemminflect_pos, lemma_ids)
             else:
                 non_en_data = (
                     sense_id,
@@ -137,14 +134,13 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
                     int(display_lemma_id_str),
                     lemma_lang,
                 )
-                max_lemma_id = insert_non_en_data(
+                insert_non_en_data(
                     conn,
                     non_en_data,
                     translations,
                     difficulty_data,
                     inserted_lemma_pos,
                     lemma_ids,
-                    max_lemma_id,
                 )
 
     conn.executescript(
@@ -158,16 +154,17 @@ def create_kindle_lemmas_db(lemma_lang: str, klld_path: Path, db_path: Path) -> 
 
 
 def insert_lemma(
-    conn: sqlite3.Connection, lemma: str, lemma_ids: dict[str, int], max_lemma_id: int
-) -> tuple[int, int]:
+    conn: sqlite3.Connection, lemma: str, lemma_ids: dict[str, int]
+) -> int:
     if lemma in lemma_ids:
-        return lemma_ids[lemma], max_lemma_id
+        return lemma_ids[lemma]
 
-    lemma_id = max_lemma_id
-    lemma_ids[lemma] = lemma_id
-    max_lemma_id += 1
-    conn.execute("INSERT INTO lemmas VALUES(?, ?)", (lemma_id, lemma))
-    return lemma_id, max_lemma_id
+    lemma_id = 0
+    for (new_lemma_id,) in conn.execute(
+        "INSERT INTO lemmas (lemma) VALUES(?) RETURNING id", (lemma,)
+    ):
+        lemma_id = new_lemma_id
+    return lemma_id
 
 
 def insert_en_data(
@@ -176,9 +173,8 @@ def insert_en_data(
     data: tuple[int, int, str, int],
     lemminflect_pos: str | None,
     lemma_ids: dict[str, int],
-    max_lemma_id: int,
-) -> int:
-    lemma_id, max_lemma_id = insert_lemma(conn, lemma, lemma_ids, max_lemma_id)
+) -> None:
+    lemma_id = insert_lemma(conn, lemma, lemma_ids)
     conn.execute(
         "INSERT INTO senses (id, enabled, pos, difficulty, lemma_id) VALUES(?, ?, ?, ?, ?)",
         data + (lemma_id,),
@@ -209,8 +205,6 @@ def insert_en_data(
             ),
         )
 
-    return max_lemma_id
-
 
 def insert_non_en_data(
     conn: sqlite3.Connection,
@@ -219,8 +213,7 @@ def insert_non_en_data(
     difficulty_data: dict[str, int],
     inserted_lemmas_pos: set[str],
     lemma_ids: dict[str, int],
-    max_lemma_id: int,
-) -> int:
+) -> None:
     sense_id, lemma, pos, display_lemma_id, lemma_lang = data
     tr_forms = translations.get(f"{lemma}_{pos}")
     if tr_forms is None and ("(" in lemma or "/" in lemma):
@@ -238,7 +231,7 @@ def insert_non_en_data(
             if f"{test_lemma}_{pos}_{display_lemma_id}" not in inserted_lemmas_pos:
                 tr_lemma = test_lemma
                 break
-        lemma_id, max_lemma_id = insert_lemma(conn, tr_lemma, lemma_ids, max_lemma_id)
+        lemma_id = insert_lemma(conn, tr_lemma, lemma_ids)
         difficulty = (
             difficulty_data.get(tr_lemma, 1)
             if difficulty_data is not None
@@ -263,13 +256,11 @@ def insert_non_en_data(
         inserted_lemmas_pos.add(tr_lemma_pos_en_id)
     else:
         # No translation
-        lemma_id, max_lemma_id = insert_lemma(conn, lemma, lemma_ids, max_lemma_id)
+        lemma_id = insert_lemma(conn, lemma, lemma_ids)
         conn.execute(
             "INSERT INTO senses (id, enabled, lemma_id, pos, difficulty) VALUES(?, ?, ?, ?, ?)",
             (sense_id, 0, lemma_id, pos, 1),
         )
-
-    return max_lemma_id
 
 
 def extract_kindle_lemmas(klld_path: str) -> None:
