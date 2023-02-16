@@ -18,8 +18,5 @@ kaikki.*.json
 *_zh.json
 *tar.gz
 wiktionary_*.db
-wiktionary_*_dump_*
 kindle_*.db
-kindle_*_dump_v*
-forms.json
-translations.json
+*.klld

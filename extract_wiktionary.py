@@ -3,14 +3,12 @@ import re
 import sqlite3
 import subprocess
 import tarfile
-from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
 from typing import Any
 from urllib.request import urlopen
 
 from en.extract_kindle_lemmas import freq_to_difficulty, get_inflections
-from en.translate import kaikki_to_kindle_pos
 
 FILTER_TAGS = frozenset(
     {
@@ -107,14 +105,18 @@ def init_db(db_path: Path, lemma_lang: str) -> sqlite3.Connection:
     return conn
 
 
+def wiktionary_db_path(lemma_lang: str, gloss_lang: str, major_version: str) -> Path:
+    return Path(
+        f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{major_version}.db"
+    )
+
+
 def create_wiktionary_lemmas_db(
     lemma_lang: str, gloss_lang: str, major_version: str
 ) -> list[Path]:
     kaikki_json_path, difficulty_data = load_data(lemma_lang, gloss_lang)
 
-    db_path = Path(
-        f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{major_version}.db"
-    )
+    db_path = wiktionary_db_path(lemma_lang, gloss_lang, major_version)
     conn = init_db(db_path, lemma_lang)
     if gloss_lang == "zh":
         zh_cn_db_path = Path(
@@ -129,9 +131,6 @@ def create_wiktionary_lemmas_db(
 
         converter = opencc.OpenCC("t2s.json")
 
-    all_forms_data: dict[str, list[str]] | None = (
-        defaultdict(list) if lemma_lang != "en" and gloss_lang == "en" else None
-    )
     lemma_ids: dict[str, int] = {}
 
     with open(kaikki_json_path, encoding="utf-8") as f:
@@ -167,10 +166,6 @@ def create_wiktionary_lemmas_db(
                 simplified_form = converter.convert(word)
                 if simplified_form != word:
                     forms.add(simplified_form)
-            if all_forms_data is not None:
-                all_forms_data[f"{word}_{kaikki_to_kindle_pos(pos)}"].extend(
-                    list(forms)
-                )
 
             sense_data = []
             zh_cn_sense_data = []
@@ -207,7 +202,9 @@ def create_wiktionary_lemmas_db(
                             enabled,
                             converter.convert(short_gloss),
                             converter.convert(gloss),
-                            converter.convert(example_sent) if example_sent else "",
+                            converter.convert(example_sent)
+                            if example_sent is not None
+                            else None,
                         )
                     )
                 enabled = False
@@ -240,9 +237,6 @@ def create_wiktionary_lemmas_db(
         zh_cn_conn.executescript(create_indexes_sql)
         zh_cn_conn.commit()
         zh_cn_conn.close()
-    if all_forms_data is not None:
-        with open(f"{lemma_lang}/forms.json", "w", encoding="utf-8") as f:
-            json.dump(all_forms_data, f, ensure_ascii=False)
     return [db_path, zh_cn_db_path] if gloss_lang == "zh" else [db_path]
 
 

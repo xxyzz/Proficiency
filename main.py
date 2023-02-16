@@ -6,11 +6,11 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from pathlib import Path
 
+from create_klld import create_klld_db
 from en.extract_kindle_lemmas import create_kindle_lemmas_db
-from en.translate import translate_english_lemmas
-from extract_wiktionary import create_wiktionary_lemmas_db
+from extract_wiktionary import create_wiktionary_lemmas_db, wiktionary_db_path
 
-VERSION = "0.5.4dev"
+VERSION = "0.5.5dev"
 MAJOR_VERSION = VERSION.split(".")[0]
 
 
@@ -35,10 +35,22 @@ def create_wiktionary_files(lemma_lang: str, gloss_lang: str = "en") -> None:
         )
 
 
-def create_kindle_files(lemma_lang: str, kaikki_json_path: Path = Path()) -> None:
-    db_path = Path(f"{lemma_lang}/kindle_{lemma_lang}_en_v{MAJOR_VERSION}.db")
-    create_kindle_lemmas_db(lemma_lang, kaikki_json_path, db_path)
-    compress(Path(f"{lemma_lang}/kindle_{lemma_lang}_en_v{VERSION}.tar.gz"), [db_path])
+def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
+    if lemma_lang == "en" and gloss_lang == "en":
+        db_path = Path(f"en/kindle_en_en_v{MAJOR_VERSION}.db")
+        create_kindle_lemmas_db(db_path)
+        compress(Path(f"en/kindle_en_en_v{VERSION}.tar.gz"), [db_path])
+
+    klld_path = Path(f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}.klld")
+    create_klld_db(
+        wiktionary_db_path(lemma_lang, gloss_lang, MAJOR_VERSION),
+        klld_path,
+        lemma_lang,
+        gloss_lang,
+    )
+    compress(
+        Path(f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}.klld.tar.gz"), [klld_path]
+    )
 
 
 def main() -> None:
@@ -66,18 +78,20 @@ def main() -> None:
         ):
             pass
         logging.info("Wiktionary files created")
-        if args.gloss_lang == "en":
-            kaikki_json_path = Path("en/kaikki.org-dictionary-English.json")
-            translate_english_lemmas(
-                kaikki_json_path, set(args.lemma_lang_codes) - {"en"}
-            )
-            logging.info("Creating Kindle files")
+
+        logging.info("Creating Kindle files")
+        for _ in executor.map(
+            partial(create_kindle_files, gloss_lang=args.gloss_lang),
+            args.lemma_lang_codes,
+        ):
+            pass
+        if args.gloss_lang == "zh":
             for _ in executor.map(
-                partial(create_kindle_files, kaikki_json_path=kaikki_json_path),
+                partial(create_kindle_files, gloss_lang="zh_cn"),
                 args.lemma_lang_codes,
             ):
                 pass
-            logging.info("Kindle files created")
+        logging.info("Kindle files created")
 
 
 if __name__ == "__main__":
