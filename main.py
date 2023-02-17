@@ -41,7 +41,9 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
         create_kindle_lemmas_db(db_path)
         compress(Path(f"en/kindle_en_en_v{VERSION}.tar.gz"), [db_path])
 
-    klld_path = Path(f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}.klld")
+    klld_path = Path(
+        f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
+    )
     create_klld_db(
         wiktionary_db_path(lemma_lang, gloss_lang, MAJOR_VERSION),
         klld_path,
@@ -49,7 +51,8 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
         gloss_lang,
     )
     compress(
-        Path(f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}.klld.tar.gz"), [klld_path]
+        Path(f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{VERSION}.klld.tar.gz"),
+        [klld_path],
     )
 
 
