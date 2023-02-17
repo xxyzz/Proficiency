@@ -37,3 +37,4 @@ jobs:
           path: |
             **/wiktionary_*.tar.gz
             **/kindle_*.tar.gz
+            **/kll.*.tar.gz
