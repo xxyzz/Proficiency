@@ -235,7 +235,7 @@ def insert_senses(
 
 
 def init_oxigraph_store(gloss_lang: str) -> tuple[Store, bool]:
-    store = Store()
+    store = Store(f"ttl/{gloss_lang}_store")
     store.bulk_load(f"ttl/{gloss_lang}_dbnary_ontolex.ttl", "text/turtle")
     exolex_path = Path(f"ttl/{gloss_lang}_dbnary_exolex_ontolex.ttl")
     if exolex_path.exists():
