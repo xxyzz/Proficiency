@@ -105,19 +105,19 @@ def main() -> None:
         avaliable_lemma_languages: set[str] = set()
         if dbnary_languages[args.gloss_lang]["has_exolex"]:
             if "lemma_languages" in dbnary_languages[args.gloss_lang]:
-                avaliable_lemma_languages = dbnary_languages[args.gloss_lang][
-                    "lemma_languages"
-                ]
+                avaliable_lemma_languages = set(
+                    dbnary_languages[args.gloss_lang]["lemma_languages"]
+                )
             else:
-                avaliable_lemma_languages = kaikki_languages.keys()
+                avaliable_lemma_languages = set(kaikki_languages.keys())
         else:
             avaliable_lemma_languages = {args.gloss_lang}
         lemma_languages = set(args.lemma_lang_codes) & avaliable_lemma_languages
         if len(lemma_languages) == 0:
-            print(
+            logging.error(
                 f"Invalid lemma language code, avaliable codes: {avaliable_lemma_languages}"
             )
-            return
+            raise ValueError
         args.lemma_lang_codes = list(lemma_languages)
 
     with ProcessPoolExecutor() as executor:
