@@ -1,4 +1,5 @@
 import json
+import platform
 import sqlite3
 import subprocess
 from pathlib import Path
@@ -50,7 +51,24 @@ def download_dbnary_file(url: str) -> None:
         if ttl_path.name == "es_dbnary_ontolex.ttl":
             # Fix parse subtag error
             subprocess.run(
-                ["perl", "-C", "-pi", "-e", "s/es-ll-ipa/es-ipa/g", str(ttl_path)],
+                ["perl", "-C", "-pi", "-e", "s/es-.+-ipa/es-fonipa/g", str(ttl_path)],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+        if ttl_path.name == "fr_dbnary_ontolex.ttl":
+            # Remove invalid line in fr file created at 2023-02-21 01:29
+            args = ["sed", "-i"]
+            if platform.system() == "Darwin":
+                args.append("")
+            args.extend(
+                [
+                    '/dcterms:bibliographicCitation  "Georges Feydeau, Le Dindon, 1896"@frC/d',
+                    str(ttl_path),
+                ]
+            )
+            subprocess.run(
+                args,
                 check=True,
                 text=True,
                 capture_output=True,
@@ -259,7 +277,7 @@ def dbnary_to_kaikki_pos(pos: str) -> str:
 
 
 if __name__ == "__main__":
-    gloss_lang = "es"
+    gloss_lang = "fr"
     store = Store()
     # store.bulk_load(f"ttl/test.ttl", "text/turtle")
     store.bulk_load(f"ttl/{gloss_lang}_dbnary_ontolex.ttl", "text/turtle")
