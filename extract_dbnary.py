@@ -31,7 +31,8 @@ def download_dbnary_files(gloss_lang: str) -> None:
 
 
 def download_dbnary_file(url: str, gloss_lang: str) -> None:
-    ttl_path = Path(f"ttl/{url.rsplit('/', 1)[-1]}").with_suffix("")
+    bz2_path = Path(f"ttl/{url.rsplit('/', 1)[-1]}")
+    ttl_path = bz2_path.with_suffix("")
     if not ttl_path.exists():
         subprocess.run(
             ["wget", "-nv", "-P", "ttl", url],
@@ -40,7 +41,7 @@ def download_dbnary_file(url: str, gloss_lang: str) -> None:
             capture_output=True,
         )
         subprocess.run(
-            ["bunzip2", str(ttl_path)], check=True, text=True, capture_output=True
+            ["bunzip2", str(bz2_path)], check=True, text=True, capture_output=True
         )
         # remove private use area characters that cause invalid IRI error
         # https://www.unicode.org/charts/PDF/UE000.pdf
@@ -280,28 +281,6 @@ if __name__ == "__main__":
       FILTER(STRLEN(STR(?lang)) = 2)
     }
     GROUP BY ?lang
-    """
-
-    query = r"""
-    PREFIX lexinfo:  <http://www.lexinfo.net/ontology/2.0/lexinfo#>
-    PREFIX lime:     <http://www.w3.org/ns/lemon/lime#>
-    PREFIX ontolex:  <http://www.w3.org/ns/lemon/ontolex#>
-    PREFIX rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-
-    SELECT DISTINCT (GROUP_CONCAT(DISTINCT ?form_rep; SEPARATOR="|") AS ?word) ?pos (SAMPLE(?ipas) AS ?ipa)
-    WHERE {
-      ?entry rdf:type ontolex:LexicalEntry ;
-             ontolex:canonicalForm ?form ;
-             lexinfo:partOfSpeech ?pos ;
-             ontolex:sense ?sense .
-      ?form ontolex:writtenRep ?form_rep .
-      OPTIONAL { ?form ontolex:phoneticRep ?ipas . }
-      FILTER (?pos in (lexinfo:adjective, lexinfo:adverb, lexinfo:noun, lexinfo:properNoun, lexinfo:verb)) .
-      FILTER (STRLEN(STR(?form_rep)) >= 3) .
-      FILTER (!REGEX(STR(?form_rep), "^\\d|'|&|\\(|\\.|-"))
-    }
-    GROUP BY ?entry ?pos
-    ORDER BY ?word ?pos
     """
 
     # query_data = list(store.query(lang_query))
