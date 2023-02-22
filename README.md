@@ -4,9 +4,11 @@ Language files for [WordDumb](https://github.com/xxyzz/WordDumb).
 
 ## Data source
 
-English Wiktionary extracted data come from kaikki.org, Chinese Wiktionary data are created with the [Wiktextract](https://github.com/tatuylonen/wiktextract) tool. Word difficulty data sources are listed in each language subfolders.
+Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about-dbnary), Chinese Wiktionary data are created with the [Wiktextract](https://github.com/tatuylonen/wiktextract) tool. Word difficulty data sources are listed in each language subfolders.
 
 ## Dependencies
+
+- Python
 
 - wget: download files
 
@@ -17,6 +19,12 @@ English Wiktionary extracted data come from kaikki.org, Chinese Wiktionary data 
 - [wordfreq](https://github.com/rspeer/wordfreq): get word frequency data
 
 - [wiktextract-lemmatization](https://github.com/Vuizur/wiktextract-lemmatization): remove [stress](https://en.wikipedia.org/wiki/Stress_(linguistics))
+
+- perl: Remove invalid unicode characters
+
+- bunzip2
+
+- [oxigraph](https://github.com/oxigraph/oxigraph)
 
 ## Create files
 

@@ -7,10 +7,16 @@ from functools import partial
 from pathlib import Path
 
 from create_klld import create_klld_db
-from en.extract_kindle_lemmas import create_kindle_lemmas_db
-from extract_wiktionary import create_wiktionary_lemmas_db, wiktionary_db_path
+from database import wiktionary_db_path
+from extract_dbnary import (
+    create_lemmas_db_from_dbnary,
+    download_dbnary_files,
+    init_oxigraph_store,
+)
+from extract_kaikki import create_lemmas_db_from_kaikki
+from extract_kindle_lemmas import create_kindle_lemmas_db
 
-VERSION = "0.5.5dev"
+VERSION = "0.5.6dev"
 MAJOR_VERSION = VERSION.split(".")[0]
 
 
@@ -22,8 +28,9 @@ def compress(tar_path: Path, files: list[Path]) -> None:
             tar.add(wiktionary_file)
 
 
-def create_wiktionary_files(lemma_lang: str, gloss_lang: str = "en") -> None:
-    db_paths = create_wiktionary_lemmas_db(lemma_lang, gloss_lang, MAJOR_VERSION)
+def compress_wiktionary_files(
+    db_paths: list[Path], lemma_lang: str, gloss_lang: str
+) -> None:
     compress(
         Path(f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.tar.gz"),
         db_paths[:1],
@@ -33,6 +40,25 @@ def create_wiktionary_files(lemma_lang: str, gloss_lang: str = "en") -> None:
             Path(f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.tar.gz"),
             db_paths[1:],
         )
+
+
+def create_wiktionary_files_from_kaikki(
+    lemma_lang: str, gloss_lang: str = "en"
+) -> None:
+    db_paths = create_lemmas_db_from_kaikki(lemma_lang, gloss_lang)
+    compress_wiktionary_files(db_paths, lemma_lang, gloss_lang)
+
+
+def create_wiktionary_files_from_dbnary(
+    lemma_langs: list[str], gloss_lang: str
+) -> None:
+    download_dbnary_files(gloss_lang)
+    store, has_morphology = init_oxigraph_store(gloss_lang)
+    for lemma_lang in lemma_langs:
+        db_paths = create_lemmas_db_from_dbnary(
+            store, lemma_lang, gloss_lang, has_morphology
+        )
+        compress_wiktionary_files(db_paths, lemma_lang, gloss_lang)
 
 
 def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
@@ -45,7 +71,7 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
         f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
     )
     create_klld_db(
-        wiktionary_db_path(lemma_lang, gloss_lang, MAJOR_VERSION),
+        wiktionary_db_path(lemma_lang, gloss_lang),
         klld_path,
         lemma_lang,
         gloss_lang,
@@ -60,11 +86,14 @@ def main() -> None:
     logging.basicConfig(
         format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
     )
-    with open("kaikki_languages.json", encoding="utf-8") as f:
+    with open("data/kaikki_languages.json", encoding="utf-8") as f:
         kaikki_languages = json.load(f)
+    with open("data/dbnary_languages.json") as f:
+        dbnary_languages = json.load(f)
+    gloss_languages = kaikki_languages.keys() & dbnary_languages.keys()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("gloss_lang", choices=["en", "zh"])
+    parser.add_argument("gloss_lang", choices=gloss_languages)
     parser.add_argument(
         "--lemma-lang-codes",
         nargs="*",
@@ -72,14 +101,37 @@ def main() -> None:
         choices=kaikki_languages.keys(),
     )
     args = parser.parse_args()
+    if args.gloss_lang not in ["en", "zh"]:
+        avaliable_lemma_languages: set[str] = set()
+        if dbnary_languages[args.gloss_lang]["has_exolex"]:
+            if "lemma_languages" in dbnary_languages[args.gloss_lang]:
+                avaliable_lemma_languages = dbnary_languages[args.gloss_lang][
+                    "lemma_languages"
+                ]
+            else:
+                avaliable_lemma_languages = kaikki_languages.keys()
+        else:
+            avaliable_lemma_languages = {args.gloss_lang}
+        lemma_languages = set(args.lemma_lang_codes) & avaliable_lemma_languages
+        if len(lemma_languages) == 0:
+            print(
+                f"Invalid lemma language code, avaliable codes: {avaliable_lemma_languages}"
+            )
+            return
+        args.lemma_lang_codes = list(lemma_languages)
 
     with ProcessPoolExecutor() as executor:
         logging.info("Creating Wiktionary files")
-        for _ in executor.map(
-            partial(create_wiktionary_files, gloss_lang=args.gloss_lang),
-            args.lemma_lang_codes,
-        ):
-            pass
+        if args.gloss_lang in ["en", "zh"]:
+            for _ in executor.map(
+                partial(
+                    create_wiktionary_files_from_kaikki, gloss_lang=args.gloss_lang
+                ),
+                args.lemma_lang_codes,
+            ):
+                pass
+        else:
+            create_wiktionary_files_from_dbnary(args.lemma_lang_codes, args.gloss_lang)
         logging.info("Wiktionary files created")
 
         logging.info("Creating Kindle files")

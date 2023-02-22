@@ -1,0 +1,108 @@
+{
+  "bg": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "de": {
+    "has_exolex": false,
+    "has_morphology": true
+  },
+  "el": {
+    "has_exolex": true,
+    "lemma_languages": [
+      "el",
+      "en",
+      "fr"
+    ],
+    "has_morphology": false
+  },
+  "en": {
+    "has_exolex": true,
+    "has_morphology": true
+  },
+  "es": {
+    "has_exolex": true,
+    "lemma_languages": [
+      "en",
+      "es"
+    ],
+    "has_morphology": false
+  },
+  "fi": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "fr": {
+    "has_exolex": true,
+    "has_morphology": true
+  },
+  "id": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "it": {
+    "has_exolex": true,
+    "lemma_languages": [
+      "en",
+      "it"
+    ],
+    "has_morphology": false
+  },
+  "ja": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "ku": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "la": {
+    "has_exolex": true,
+    "has_morphology": false
+  },
+  "lt": {
+    "has_exolex": false,
+    "comment": "empty definition string",
+    "has_morphology": false
+  },
+  "mg": {
+    "has_exolex": true,
+    "has_morphology": false
+  },
+  "nl": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "no": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "pl": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "pt": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "ru": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "sh": {
+    "has_exolex": false,
+    "has_morphology": true
+  },
+  "sv": {
+    "has_exolex": false,
+    "has_morphology": true
+  },
+  "tr": {
+    "has_exolex": false,
+    "has_morphology": false
+  },
+  "zh": {
+    "has_exolex": false,
+    "has_morphology": false
+  }
+}

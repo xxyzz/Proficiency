@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        gloss_lang: ["en", "zh"]
+        gloss_lang: ['de', 'el', 'en', 'es', 'fi', 'fr', 'it', 'ja', 'lt', 'nl', 'no', 'pl', 'pt', 'ru', 'sv', 'zh']
     steps:
       - uses: actions/checkout@v3
 
