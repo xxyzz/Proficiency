@@ -3,8 +3,11 @@ import json
 import re
 import sqlite3
 import sys
-from itertools import chain, product
+from itertools import product
 from pathlib import Path
+
+from database import create_indexes_then_close, init_db
+from util import get_en_inflections
 
 
 def kindle_to_lemminflect_pos(pos: str) -> str | None:
@@ -24,15 +27,6 @@ def kindle_to_lemminflect_pos(pos: str) -> str | None:
             return None
 
 
-def get_inflections(lemma: str, pos: str | None) -> set[str]:
-    from lemminflect import getAllInflections, getAllInflectionsOOV
-
-    inflections = set(chain(*getAllInflections(lemma, pos).values()))
-    if not inflections and pos:
-        inflections = set(chain(*getAllInflectionsOOV(lemma, pos).values()))
-    return inflections
-
-
 def get_en_lemma_forms(lemma: str, pos: str | None) -> set[str]:
     if " " in lemma:
         if "/" in lemma:  # "be/get togged up/out"
@@ -47,7 +41,7 @@ def get_en_lemma_forms(lemma: str, pos: str | None) -> set[str]:
             return {
                 f"{inflection} {rest_words}"
                 for inflection in {first_word}.union(
-                    get_inflections(first_word, "VERB")
+                    get_en_inflections(first_word, "VERB")
                 )
             }
         else:
@@ -55,7 +49,7 @@ def get_en_lemma_forms(lemma: str, pos: str | None) -> set[str]:
     elif "-" in lemma:  # A-bomb
         return {lemma}
     else:
-        return {lemma}.union(get_inflections(lemma, pos))
+        return {lemma}.union(get_en_inflections(lemma, pos))
 
 
 def transform_lemma(lemma: str) -> set[str]:
@@ -70,37 +64,11 @@ def transform_lemma(lemma: str) -> set[str]:
         return {lemma}
 
 
-def freq_to_difficulty(word: str, lang: str) -> int:
-    from wordfreq import zipf_frequency
-
-    freq = zipf_frequency(word, lang)
-    if freq >= 7:
-        return 5
-    elif freq >= 5:
-        return 4
-    elif freq >= 3:
-        return 3
-    elif freq >= 1:
-        return 2
-    else:
-        return 1
-
-
 def create_kindle_lemmas_db(db_path: Path) -> None:
     with open("en/kindle_enabled_lemmas.json", encoding="utf-8") as f:
         enabled_lemmas = json.load(f)
     enabled_sense_ids: set[int] = {data[1] for data in enabled_lemmas.values()}
-    if db_path.exists():
-        db_path.unlink()
-    conn = sqlite3.Connection(db_path)
-    conn.executescript(
-        """
-    PRAGMA foreign_keys = ON;
-    CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT COLLATE NOCASE);
-    CREATE TABLE forms (form TEXT COLLATE NOCASE, pos TEXT, lemma_id INTEGER, PRIMARY KEY(form, pos, lemma_id), FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
-    CREATE TABLE senses (id INTEGER PRIMARY KEY, enabled INTEGER, lemma_id INTEGER, pos TEXT, short_def TEXT DEFAULT '', full_def TEXT DEFAULT '', example TEXT DEFAULT '', difficulty INTEGER, FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
-    """
-    )
+    conn = init_db(db_path, "en", True, False)
 
     with open("en/kindle_all_lemmas.csv", newline="") as f:
         csv_reader = csv.reader(f)
@@ -113,14 +81,7 @@ def create_kindle_lemmas_db(db_path: Path) -> None:
             en_data = (sense_id, enabled, pos_type, difficulty)
             insert_en_data(conn, lemma, en_data, lemminflect_pos, lemma_ids)
 
-    conn.executescript(
-        """
-    CREATE INDEX idx_lemmas ON lemmas (lemma);
-    CREATE INDEX idx_senses ON senses (lemma_id, pos);
-    """
-    )
-    conn.commit()
-    conn.close()
+    create_indexes_then_close(conn)
 
 
 def insert_lemma(
@@ -178,7 +139,7 @@ def insert_en_data(
 
 def extract_kindle_lemmas(klld_path: str) -> None:
     conn = sqlite3.connect(klld_path)
-    with open("kindle_all_lemmas.csv", "w", encoding="utf-8", newline="") as f:
+    with open("en/kindle_all_lemmas.csv", "w", encoding="utf-8", newline="") as f:
         csv_writer = csv.writer(f)
         for data in conn.execute(
             "SELECT lemma, pos_types.label, senses.id, display_lemma_id FROM lemmas JOIN senses ON lemmas.id = display_lemma_id JOIN pos_types ON pos_types.id = senses.pos_type WHERE (full_def IS NOT NULL OR short_def IS NOT NULL) AND lemma NOT like '-%' ORDER BY lemma, pos_type, senses.id"

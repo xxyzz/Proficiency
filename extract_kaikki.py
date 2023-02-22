@@ -8,7 +8,14 @@ from pathlib import Path
 from typing import Any
 from urllib.request import urlopen
 
-from en.extract_kindle_lemmas import freq_to_difficulty, get_inflections
+from database import create_indexes_then_close, init_db, wiktionary_db_path
+from util import (
+    freq_to_difficulty,
+    get_en_inflections,
+    get_short_def,
+    get_shortest_lemma_length,
+    load_difficulty_data,
+)
 
 FILTER_TAGS = frozenset(
     {
@@ -30,7 +37,7 @@ USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
 
 
 def download_kaikki_json(lang: str) -> Path:
-    with open("kaikki_languages.json", encoding="utf-8") as f:
+    with open("data/kaikki_languages.json", encoding="utf-8") as f:
         kaikki_languages = json.load(f)
 
     filename_lang = re.sub(r"[\s-]", "", kaikki_languages[lang])
@@ -69,63 +76,21 @@ def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
     else:
         kaikki_json_path = download_zh_json("sh" if lemma_lang == "hr" else lemma_lang)
 
-    difficulty_data = {}
-    if lemma_lang != "en":
-        difficulty_json_path = Path(f"{lemma_lang}/difficulty.json")
-        if difficulty_json_path.exists():
-            with difficulty_json_path.open(encoding="utf-8") as f:
-                difficulty_data = json.load(f)
-    else:
-        with open("en/kindle_enabled_lemmas.json", encoding="utf-8") as f:
-            difficulty_data = {
-                lemma: values[0] for lemma, values in json.load(f).items()
-            }
+    difficulty_data = load_difficulty_data(lemma_lang)
     return kaikki_json_path, difficulty_data
 
 
-def init_db(db_path: Path, lemma_lang: str) -> sqlite3.Connection:
-    if not db_path.parent.is_dir():
-        db_path.parent.mkdir()
-    if db_path.exists():
-        db_path.unlink()
-    conn = sqlite3.connect(db_path)
-    conn.execute("PRAGMA foreign_keys = ON")
-    if lemma_lang == "en":
-        create_lemmas_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT COLLATE NOCASE, ga_ipa TEXT, rp_ipa TEXT)"
-    elif lemma_lang == "zh":
-        create_lemmas_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT COLLATE NOCASE, pinyin TEXT, bopomofo TEXT)"
-    else:
-        create_lemmas_table_sql = "CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT COLLATE NOCASE, ipa TEXT)"
-    conn.execute(create_lemmas_table_sql)
-    create_other_tables_sql = """
-    CREATE TABLE forms (form TEXT COLLATE NOCASE, pos TEXT, lemma_id INTEGER, PRIMARY KEY(form, pos, lemma_id), FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
-    CREATE TABLE senses (id INTEGER PRIMARY KEY, enabled INTEGER, lemma_id INTEGER, pos TEXT, short_def TEXT, full_def TEXT, example TEXT, difficulty INTEGER, FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
-    """
-    conn.executescript(create_other_tables_sql)
-    return conn
-
-
-def wiktionary_db_path(lemma_lang: str, gloss_lang: str, major_version: str) -> Path:
-    return Path(
-        f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{major_version}.db"
-    )
-
-
-def create_wiktionary_lemmas_db(
-    lemma_lang: str, gloss_lang: str, major_version: str
-) -> list[Path]:
+def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]:
     kaikki_json_path, difficulty_data = load_data(lemma_lang, gloss_lang)
 
-    db_path = wiktionary_db_path(lemma_lang, gloss_lang, major_version)
-    conn = init_db(db_path, lemma_lang)
+    db_path = wiktionary_db_path(lemma_lang, gloss_lang)
+    conn = init_db(db_path, lemma_lang, False, True)
     if gloss_lang == "zh":
-        zh_cn_db_path = Path(
-            f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{major_version}.db"
-        )
-        zh_cn_conn = init_db(zh_cn_db_path, lemma_lang)
+        zh_cn_db_path = wiktionary_db_path(lemma_lang, "zh_cn")
+        zh_cn_conn = init_db(zh_cn_db_path, lemma_lang, False, True)
 
     enabled_words_pos: set[str] = set()
-    len_limit = 2 if lemma_lang in ["zh", "ja", "ko"] else 3
+    len_limit = get_shortest_lemma_length(lemma_lang)
     if lemma_lang == "zh" or gloss_lang == "zh":
         import opencc
 
@@ -149,7 +114,7 @@ def create_wiktionary_lemmas_db(
             enabled = False if word_pos in enabled_words_pos else True
             difficulty = 1
             if difficulty_data:
-                if enabled and word in difficulty_data:
+                if word in difficulty_data:
                     difficulty = difficulty_data[word]
                 else:
                     enabled = False
@@ -202,9 +167,7 @@ def create_wiktionary_lemmas_db(
                             enabled,
                             converter.convert(short_gloss),
                             converter.convert(gloss),
-                            converter.convert(example_sent)
-                            if example_sent is not None
-                            else None,
+                            example_sent if example_sent is not None else None,
                         )
                     )
                 enabled = False
@@ -226,17 +189,9 @@ def create_wiktionary_lemmas_db(
                         zh_cn_conn, zh_cn_sense_data, lemma_id, pos, difficulty
                     )
 
-    create_indexes_sql = """
-    CREATE INDEX idx_lemmas ON lemmas (lemma);
-    CREATE INDEX idx_senses ON senses (lemma_id, pos);
-    """
-    conn.executescript(create_indexes_sql)
-    conn.commit()
-    conn.close()
+    create_indexes_then_close(conn)
     if gloss_lang == "zh":
-        zh_cn_conn.executescript(create_indexes_sql)
-        zh_cn_conn.commit()
-        zh_cn_conn.close()
+        create_indexes_then_close(zh_cn_conn)
     return [db_path, zh_cn_db_path] if gloss_lang == "zh" else [db_path]
 
 
@@ -339,20 +294,6 @@ def get_ipas(lang: str, sounds: list[dict[str, str]]) -> dict[str, str] | str:
     return ipas if ipas else ""
 
 
-def get_short_def(gloss: str, gloss_lang: str) -> str:
-    gloss = gloss.removesuffix(".").removesuffix("。")
-    gloss = re.sub(
-        r"\([^)]+\)|（[^）]+）|〈[^〉]+〉|\[[^]]+\]|［[^］]+］|【[^】]+】|﹝[^﹞]+﹞|「[^」]+」",
-        "",
-        gloss,
-    )
-    gloss = min(re.split(";|；", gloss), key=len)
-    gloss = min(gloss.split("/"), key=len)
-    if gloss_lang == "zh":
-        gloss = min(gloss.split("、"), key=len)
-    return gloss.strip()
-
-
 # https://lemminflect.readthedocs.io/en/latest/tags/
 LEMMINFLECT_POS_TAGS = {
     "adj": "ADJ",
@@ -376,7 +317,7 @@ def get_forms(
     forms: set[str] = set()
     if lemma_lang == "en" and gloss_lang == "zh":
         # Extracted Chinese Wiktionary forms data are not usable yet
-        find_forms = get_inflections(word, LEMMINFLECT_POS_TAGS.get(pos))
+        find_forms = get_en_inflections(word, LEMMINFLECT_POS_TAGS.get(pos))
         if find_forms:
             if word in find_forms:
                 find_forms.remove(word)
