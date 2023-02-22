@@ -17,6 +17,7 @@ jobs:
     name: Create files
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         gloss_lang: ['de', 'el', 'en', 'es', 'fi', 'fr', 'it', 'ja', 'lt', 'nl', 'no', 'pl', 'pt', 'ru', 'sv', 'zh']
     steps:

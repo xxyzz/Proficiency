@@ -19,18 +19,14 @@ def download_dbnary_files(gloss_lang: str) -> None:
         dbnary_languages = json.load(f)
 
     base_url = "https://kaiko.getalp.org/static/ontolex/latest"
-    download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_ontolex.ttl.bz2", gloss_lang)
+    download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_ontolex.ttl.bz2")
     if dbnary_languages[gloss_lang]["has_exolex"]:
-        download_dbnary_file(
-            f"{base_url}/{gloss_lang}_dbnary_exolex_ontolex.ttl.bz2", gloss_lang
-        )
+        download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_exolex_ontolex.ttl.bz2")
     if dbnary_languages[gloss_lang]["has_morphology"]:
-        download_dbnary_file(
-            f"{base_url}/{gloss_lang}_dbnary_morphology.ttl.bz2", gloss_lang
-        )
+        download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_morphology.ttl.bz2")
 
 
-def download_dbnary_file(url: str, gloss_lang: str) -> None:
+def download_dbnary_file(url: str) -> None:
     bz2_path = Path(f"ttl/{url.rsplit('/', 1)[-1]}")
     ttl_path = bz2_path.with_suffix("")
     if not ttl_path.exists():
@@ -51,6 +47,14 @@ def download_dbnary_file(url: str, gloss_lang: str) -> None:
             text=True,
             capture_output=True,
         )
+        if ttl_path.name == "es_dbnary_ontolex.ttl":
+            # Fix parse subtag error
+            subprocess.run(
+                ["perl", "-C", "-pi", "-e", "s/es-ll-ipa/es-ipa/g", str(ttl_path)],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
 
 
 def insert_lemmas(
@@ -255,12 +259,12 @@ def dbnary_to_kaikki_pos(pos: str) -> str:
 
 
 if __name__ == "__main__":
-    gloss_lang = "fr"
+    gloss_lang = "es"
     store = Store()
-    store.bulk_load(f"ttl/test.ttl", "text/turtle")
+    # store.bulk_load(f"ttl/test.ttl", "text/turtle")
+    store.bulk_load(f"ttl/{gloss_lang}_dbnary_ontolex.ttl", "text/turtle")
+    # store.bulk_load(f"ttl/{gloss_lang}_dbnary_morphology.ttl", "text/turtle")
     # store.bulk_load(f"ttl/{gloss_lang}_dbnary_exolex_ontolex.ttl", "text/turtle")
-    # store.bulk_load("ttl/fr_dbnary_morphology.ttl", "text/turtle")
-    # store.bulk_load("ttl/fr_dbnary_exolex_ontolex.ttl", "text/turtle")
     store.optimize()
 
     lang_query = """
