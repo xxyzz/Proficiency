@@ -9,12 +9,12 @@
   },
   "el": {
     "has_exolex": true,
+    "has_morphology": false,
     "lemma_languages": [
       "el",
       "en",
       "fr"
-    ],
-    "has_morphology": false
+    ]
   },
   "en": {
     "has_exolex": true,
@@ -22,11 +22,11 @@
   },
   "es": {
     "has_exolex": true,
+    "has_morphology": false,
     "lemma_languages": [
       "en",
       "es"
-    ],
-    "has_morphology": false
+    ]
   },
   "fi": {
     "has_exolex": false,
@@ -42,11 +42,11 @@
   },
   "it": {
     "has_exolex": true,
+    "has_morphology": false,
     "lemma_languages": [
       "en",
       "it"
-    ],
-    "has_morphology": false
+    ]
   },
   "ja": {
     "has_exolex": false,
@@ -61,8 +61,8 @@
     "has_morphology": false
   },
   "lt": {
-    "has_exolex": false,
     "comment": "empty definition string",
+    "has_exolex": false,
     "has_morphology": false
   },
   "mg": {

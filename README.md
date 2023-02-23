@@ -20,7 +20,7 @@ Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about
 
 - [wiktextract-lemmatization](https://github.com/Vuizur/wiktextract-lemmatization): remove [stress](https://en.wikipedia.org/wiki/Stress_(linguistics))
 
-- perl: Remove invalid unicode characters
+- perl, sed: Remove invalid text
 
 - bunzip2
 

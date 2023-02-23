@@ -176,6 +176,7 @@ def insert_senses(
     PREFIX rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
     PREFIX skos:     <http://www.w3.org/2004/02/skos/core#>
     PREFIX dbnary:   <http://kaiko.getalp.org/dbnary#>
+    PREFIX xsd:      <http://www.w3.org/2001/XMLSchema#>
 
     SELECT DISTINCT ?lemma ?pos ?definition (SAMPLE(?example_sentence) AS ?example)
     WHERE {{
@@ -190,7 +191,7 @@ def insert_senses(
       FILTER (?pos in (lexinfo:adjective, lexinfo:adverb, lexinfo:noun, lexinfo:properNoun, lexinfo:verb))
     }}
     GROUP BY ?lemma ?pos ?definition ?sense_number
-    ORDER BY ?lemma ?pos ?sense_number
+    ORDER BY ?lemma ?pos xsd:decimal(?sense_number)
     """
 
     for query_result in store.query(query):
