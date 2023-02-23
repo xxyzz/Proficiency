@@ -22,6 +22,8 @@ def get_short_def(gloss: str, gloss_lang: str) -> str:
     gloss = min(gloss.split("/"), key=len)
     if gloss_lang == "zh":
         gloss = min(gloss.split("、"), key=len)
+    if gloss_lang == "es" and "|" in gloss:
+        gloss = gloss.split("|", 1)[1]
     return gloss.strip()
 
 
