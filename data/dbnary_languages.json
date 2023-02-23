@@ -36,6 +36,10 @@
     "has_exolex": true,
     "has_morphology": true
   },
+  "hr": {
+    "has_exolex": false,
+    "has_morphology": true
+  },
   "id": {
     "has_exolex": false,
     "has_morphology": false
@@ -88,10 +92,6 @@
   "ru": {
     "has_exolex": false,
     "has_morphology": false
-  },
-  "sh": {
-    "has_exolex": false,
-    "has_morphology": true
   },
   "sv": {
     "has_exolex": false,
