@@ -16,7 +16,7 @@ from extract_dbnary import (
 from extract_kaikki import create_lemmas_db_from_kaikki
 from extract_kindle_lemmas import create_kindle_lemmas_db
 
-VERSION = "0.5.6"
+VERSION = "0.5.7"
 MAJOR_VERSION = VERSION.split(".")[0]
 
 
