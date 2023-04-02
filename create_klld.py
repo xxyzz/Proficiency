@@ -3,6 +3,8 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
+from util import remove_full_stop
+
 
 def kaikki_to_kindle_pos_id(pos: str) -> int:
     match pos:
@@ -122,8 +124,12 @@ def create_klld_db(
                 1.0,
                 0,
                 base64.b64encode(short_def.encode("utf-8")).decode("utf-8"),
-                base64.b64encode(full_def.encode("utf-8")).decode("utf-8"),
-                base64.b64encode(example.encode("utf-8")).decode("utf-8")
+                base64.b64encode(remove_full_stop(full_def).encode("utf-8")).decode(
+                    "utf-8"
+                ),
+                base64.b64encode(remove_full_stop(example).encode("utf-8")).decode(
+                    "utf-8"
+                )
                 if example is not None
                 else None,
             ),

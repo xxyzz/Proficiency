@@ -11,8 +11,12 @@ def get_shortest_lemma_length(lemma_lang: str) -> int:
         return 3
 
 
+def remove_full_stop(text: str) -> str:
+    return text.removesuffix(".").removesuffix("。")
+
+
 def get_short_def(gloss: str, gloss_lang: str) -> str:
-    gloss = gloss.removesuffix(".").removesuffix("。")
+    gloss = remove_full_stop(gloss)
     gloss = re.sub(
         r"\([^)]+\)|（[^）]+）|〈[^〉]+〉|\[[^]]+\]|［[^］]+］|【[^】]+】|﹝[^﹞]+﹞|「[^」]+」",
         "",
