@@ -13,6 +13,9 @@ def main() -> None:
 
     with open(kaikki_json_path) as f:
         lang_codes = json.load(f)
+        del lang_codes["hr"]
+        # Wiktionary still uses the deprecated language code
+        lang_codes["sh"] = "Serbo-Croatian"
 
     files = {lang: open(f"{lang}_zh.json", "w") for lang in lang_codes}
 
