@@ -9,32 +9,10 @@ def main() -> None:
     """
 
     all_jsonl = sys.argv[1]
+    kaikki_json_path = sys.argv[2]
 
-    lang_codes = {
-        "ca",
-        "da",
-        "de",
-        "el",
-        "en",
-        "es",
-        "fi",
-        "fr",
-        "it",
-        "ja",
-        "ko",
-        "lt",
-        "mk",
-        "nl",
-        "no",
-        "pl",
-        "pt",
-        "ro",
-        "ru",
-        "sh",
-        "sv",
-        "uk",
-        "zh",
-    }
+    with open(kaikki_json_path) as f:
+        lang_codes = json.load(f)
 
     files = {lang: open(f"{lang}_zh.json", "w") for lang in lang_codes}
 
@@ -52,7 +30,7 @@ def main() -> None:
     for lang, f in files.items():
         f.close()
 
-        with tarfile.open(f"{lang}_zh.tar.gz", "w:gz") as tar:
+        with tarfile.open(f"{lang}_zh.bz2", "w:bz2") as tar:
             tar.add(f"{lang}_zh.json")
 
 

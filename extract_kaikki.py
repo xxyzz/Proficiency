@@ -63,7 +63,7 @@ def download_zh_json(lang: str) -> Path:
     filepath = Path(f"{lang}/{lang}_zh.json")
     if not filepath.exists():
         with urlopen(
-            f"https://github.com/xxyzz/wiktextract/releases/latest/download/{lang}_zh.tar.gz"
+            f"https://github.com/xxyzz/wiktextract/releases/latest/download/{lang}_zh.bz2"
         ) as r:
             with tarfile.open(fileobj=BytesIO(r.read())) as tar:
                 tar.extractall(lang)

@@ -16,7 +16,7 @@ __pycache__
 
 kaikki.*.json
 *_zh.json
-*tar.gz
+*.bz2
 wiktionary_*.db
 kindle_*.db
 *.klld

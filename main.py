@@ -23,7 +23,7 @@ MAJOR_VERSION = VERSION.split(".")[0]
 def compress(tar_path: Path, files: list[Path]) -> None:
     if tar_path.exists():
         tar_path.unlink()
-    with tarfile.open(tar_path, "x:gz") as tar:
+    with tarfile.open(tar_path, "x:bz2") as tar:
         for wiktionary_file in files:
             tar.add(wiktionary_file)
 
@@ -32,12 +32,12 @@ def compress_wiktionary_files(
     db_paths: list[Path], lemma_lang: str, gloss_lang: str
 ) -> None:
     compress(
-        Path(f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.tar.gz"),
+        Path(f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.bz2"),
         db_paths[:1],
     )
     if gloss_lang == "zh":
         compress(
-            Path(f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.tar.gz"),
+            Path(f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.bz2"),
             db_paths[1:],
         )
 
@@ -65,7 +65,7 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
     if lemma_lang == "en" and gloss_lang == "en":
         db_path = Path(f"en/kindle_en_en_v{MAJOR_VERSION}.db")
         create_kindle_lemmas_db(db_path)
-        compress(Path(f"en/kindle_en_en_v{VERSION}.tar.gz"), [db_path])
+        compress(Path(f"en/kindle_en_en_v{VERSION}.bz2"), [db_path])
 
     klld_path = Path(
         f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
@@ -77,7 +77,7 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
         gloss_lang,
     )
     compress(
-        Path(f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{VERSION}.klld.tar.gz"),
+        Path(f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{VERSION}.klld.bz2"),
         [klld_path],
     )
 

@@ -18,4 +18,4 @@ jobs:
         with:
           prerelease: ${{ endsWith(github.ref_name, 'dev') }}
           files: |
-            **/*.tar.gz
+            **/*.bz2
