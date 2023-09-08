@@ -21,15 +21,18 @@ jobs:
       matrix:
         gloss_lang: ['de', 'el', 'en', 'es', 'fi', 'fr', 'hr', 'it', 'ja', 'lt', 'nl', 'no', 'pl', 'pt', 'ru', 'sv', 'zh']
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
           cache: 'pip'
 
+      - name: Install package
+        run: python -m pip install .
+
       - name: Create files
-        run: bash ./create_files.sh ${{ matrix.gloss_lang }}
+        run: proficiency ${{ matrix.gloss_lang }}
 
       - uses: actions/upload-artifact@v3
         with:
