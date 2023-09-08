@@ -4,6 +4,7 @@ import sqlite3
 import subprocess
 from importlib.resources import files
 from pathlib import Path
+from shutil import which
 
 from pyoxigraph import Store
 
@@ -26,13 +27,11 @@ def download_dbnary_files(gloss_lang: str) -> None:
     lang_key = gloss_lang
     if gloss_lang == "hr":
         gloss_lang = "sh"
-    download_dbnary_file(f"build/{base_url}/{gloss_lang}_dbnary_ontolex.ttl.bz2")
+    download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_ontolex.ttl.bz2")
     if dbnary_languages[lang_key]["has_exolex"]:
-        download_dbnary_file(
-            f"build/{base_url}/{gloss_lang}_dbnary_exolex_ontolex.ttl.bz2"
-        )
+        download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_exolex_ontolex.ttl.bz2")
     if dbnary_languages[lang_key]["has_morphology"]:
-        download_dbnary_file(f"build/{base_url}/{gloss_lang}_dbnary_morphology.ttl.bz2")
+        download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_morphology.ttl.bz2")
 
 
 def download_dbnary_file(url: str) -> None:
@@ -40,13 +39,16 @@ def download_dbnary_file(url: str) -> None:
     ttl_path = bz2_path.with_suffix("")
     if not ttl_path.exists():
         subprocess.run(
-            ["wget", "-nv", "-P", "ttl", url],
+            ["wget", "-nv", "-P", "build/ttl", url],
             check=True,
             text=True,
             capture_output=True,
         )
         subprocess.run(
-            ["bunzip2", str(bz2_path)], check=True, text=True, capture_output=True
+            ["lbunzip2" if which("lbunzip2") is not None else "bunzip2", str(bz2_path)],
+            check=True,
+            text=True,
+            capture_output=True,
         )
         # remove private use area characters that cause invalid IRI error
         # https://www.unicode.org/charts/PDF/UE000.pdf

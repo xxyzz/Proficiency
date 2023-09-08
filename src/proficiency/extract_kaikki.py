@@ -2,12 +2,10 @@ import json
 import re
 import sqlite3
 import subprocess
-import tarfile
 from importlib.resources import files
-from io import BytesIO
 from pathlib import Path
+from shutil import which
 from typing import Any
-from urllib.request import urlopen
 
 from .database import create_indexes_then_close, init_db, wiktionary_db_path
 from .util import (
@@ -52,7 +50,7 @@ def download_kaikki_json(lang: str) -> Path:
                 "wget",
                 "-nv",
                 "-P",
-                lang,
+                f"build/{lang}",
                 f"https://kaikki.org/dictionary/{kaikki_languages[lang]}/{filename}",
             ],
             check=True,
@@ -65,11 +63,27 @@ def download_kaikki_json(lang: str) -> Path:
 def download_zh_json(lang: str) -> Path:
     filepath = Path(f"build/{lang}/{lang}_zh.json")
     if not filepath.exists():
-        with urlopen(
-            f"https://github.com/xxyzz/wiktextract/releases/latest/download/{lang}_zh.bz2"
-        ) as r:
-            with tarfile.open(fileobj=BytesIO(r.read())) as tar:
-                tar.extractall(lang)
+        subprocess.run(
+            [
+                "wget",
+                "-nv",
+                "-P",
+                f"build/{lang}",
+                f"https://github.com/xxyzz/wiktextract/releases/latest/download/{lang}_zh.bz2",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        subprocess.run(
+            [
+                "lbunzip2" if which("lbunzip2") is not None else "bunzip2",
+                str(filepath.with_suffix(".bz2")),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
     return filepath
 
 

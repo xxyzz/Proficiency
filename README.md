@@ -22,7 +22,7 @@ Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about
 
 - perl, sed: Remove invalid text
 
-- bunzip2
+- lbunzip2 or bunzip2
 
 - [oxigraph](https://github.com/oxigraph/oxigraph)
 
