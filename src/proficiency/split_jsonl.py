@@ -1,8 +1,9 @@
 import argparse
 import json
-import tarfile
+import subprocess
 from importlib.resources import files
 from pathlib import Path
+from shutil import which
 
 
 def main() -> None:
@@ -23,7 +24,7 @@ def main() -> None:
         lang_codes["sh"] = "Serbo-Croatian"
 
     out_file_paths = {
-        lemma_code: Path(f"build/{lemma_code}/{lemma_code}_{args.gloss_code}.json")
+        lemma_code: Path(f"build/{lemma_code}/{lemma_code}_{args.gloss_code}.jsonl")
         for lemma_code in lang_codes
     }
     for out_file_path in out_file_paths.values():
@@ -47,9 +48,12 @@ def main() -> None:
     for lemma_code, out_f in out_files.items():
         out_f.close()
         jsonl_path = out_file_paths[lemma_code]
-        with tarfile.open(jsonl_path.with_suffix(".bz2"), "w:bz2") as tar:
-            tar.add(jsonl_path)
-        jsonl_path.unlink()
+        subprocess.run(
+            ["lbzip2" if which("lbzip2") is not None else "bzip2", str(jsonl_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
 
 
 if __name__ == "__main__":

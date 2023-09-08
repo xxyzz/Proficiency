@@ -1,1 +1,1 @@
-recursive-include src/proficiency *.json
+recursive-include src/proficiency *.json *.csv

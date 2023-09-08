@@ -61,7 +61,7 @@ def download_kaikki_json(lang: str) -> Path:
 
 
 def download_zh_json(lang: str) -> Path:
-    filepath = Path(f"build/{lang}/{lang}_zh.json")
+    filepath = Path(f"build/{lang}/{lang}_zh.jsonl")
     if not filepath.exists():
         subprocess.run(
             [
@@ -69,7 +69,7 @@ def download_zh_json(lang: str) -> Path:
                 "-nv",
                 "-P",
                 f"build/{lang}",
-                f"https://github.com/xxyzz/wiktextract/releases/latest/download/{lang}_zh.bz2",
+                f"https://github.com/xxyzz/wiktextract/releases/latest/download/{lang}_zh.jsonl.bz2",
             ],
             check=True,
             capture_output=True,
@@ -78,7 +78,7 @@ def download_zh_json(lang: str) -> Path:
         subprocess.run(
             [
                 "lbunzip2" if which("lbunzip2") is not None else "bunzip2",
-                str(filepath.with_suffix(".bz2")),
+                str(filepath.with_suffix(".jsonl.bz2")),
             ],
             check=True,
             capture_output=True,

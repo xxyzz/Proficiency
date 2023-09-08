@@ -3,6 +3,7 @@ import json
 import re
 import sqlite3
 import sys
+from importlib.resources import files
 from itertools import product
 from pathlib import Path
 
@@ -65,12 +66,16 @@ def transform_lemma(lemma: str) -> set[str]:
 
 
 def create_kindle_lemmas_db(db_path: Path) -> None:
-    with open("en/kindle_enabled_lemmas.json", encoding="utf-8") as f:
+    with (files("proficiency") / "en" / "kindle_enabled_lemmas.json").open(
+        encoding="utf-8"
+    ) as f:
         enabled_lemmas = json.load(f)
     enabled_sense_ids: set[int] = {data[1] for data in enabled_lemmas.values()}
     conn = init_db(db_path, "en", True, False)
 
-    with open("en/kindle_all_lemmas.csv", newline="") as f:
+    with (files("proficiency") / "en" / "kindle_all_lemmas.csv").open(
+        newline="", encoding="utf-8"
+    ) as f:
         csv_reader = csv.reader(f)
         lemma_ids: dict[str, int] = {}
         for lemma, pos_type, sense_id_str, _ in csv_reader:

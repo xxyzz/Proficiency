@@ -34,12 +34,16 @@ def compress_wiktionary_files(
     db_paths: list[Path], lemma_lang: str, gloss_lang: str
 ) -> None:
     compress(
-        Path(f"build/{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.bz2"),
+        Path(
+            f"build/{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.tar.bz2"
+        ),
         db_paths[:1],
     )
     if gloss_lang == "zh":
         compress(
-            Path(f"build/{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.bz2"),
+            Path(
+                f"build/{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.tar.bz2"
+            ),
             db_paths[1:],
         )
 
@@ -67,7 +71,7 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
     if lemma_lang == "en" and gloss_lang == "en":
         db_path = Path(f"build/en/kindle_en_en_v{MAJOR_VERSION}.db")
         create_kindle_lemmas_db(db_path)
-        compress(Path(f"build/en/kindle_en_en_v{VERSION}.bz2"), [db_path])
+        compress(Path(f"build/en/kindle_en_en_v{VERSION}.tar.bz2"), [db_path])
 
     klld_path = Path(
         f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
@@ -79,7 +83,9 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
         gloss_lang,
     )
     compress(
-        Path(f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{VERSION}.klld.bz2"),
+        Path(
+            f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{VERSION}.klld.tar.bz2"
+        ),
         [klld_path],
     )
 
