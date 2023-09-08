@@ -256,12 +256,12 @@ def insert_senses(
 def init_oxigraph_store(gloss_lang: str) -> tuple[Store, bool]:
     if gloss_lang == "hr":
         gloss_lang = "sh"
-    store = Store(f"ttl/{gloss_lang}_store")
-    store.bulk_load(f"ttl/{gloss_lang}_dbnary_ontolex.ttl", "text/turtle")
-    exolex_path = Path(f"ttl/{gloss_lang}_dbnary_exolex_ontolex.ttl")
+    store = Store(f"build/ttl/{gloss_lang}_store")
+    store.bulk_load(f"build/ttl/{gloss_lang}_dbnary_ontolex.ttl", "text/turtle")
+    exolex_path = Path(f"build/ttl/{gloss_lang}_dbnary_exolex_ontolex.ttl")
     if exolex_path.exists():
         store.bulk_load(str(exolex_path), "text/turtle")
-    morphology_path = Path(f"ttl/{gloss_lang}_dbnary_morphology.ttl")
+    morphology_path = Path(f"build/ttl/{gloss_lang}_dbnary_morphology.ttl")
     if morphology_path.exists():
         store.bulk_load(str(morphology_path), "text/turtle")
     store.optimize()
@@ -305,7 +305,7 @@ if __name__ == "__main__":
     gloss_lang = "fr"
     store = Store()
     # store.bulk_load(f"ttl/test.ttl", "text/turtle")
-    store.bulk_load(f"ttl/{gloss_lang}_dbnary_ontolex.ttl", "text/turtle")
+    store.bulk_load(f"build/ttl/{gloss_lang}_dbnary_ontolex.ttl", "text/turtle")
     # store.bulk_load(f"ttl/{gloss_lang}_dbnary_morphology.ttl", "text/turtle")
     # store.bulk_load(f"ttl/{gloss_lang}_dbnary_exolex_ontolex.ttl", "text/turtle")
     store.optimize()

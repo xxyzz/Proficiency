@@ -39,6 +39,10 @@ check_untyped_defs = true
 strict = true
 
 [[tool.mypy.overrides]]
+module = "lemminflect.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "opencc.*"
 ignore_missing_imports = true
 
