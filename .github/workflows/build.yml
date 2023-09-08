@@ -35,6 +35,9 @@ jobs:
 
       - name: Create files
         run: proficiency ${{ matrix.gloss_lang }}
+        env:
+          PYTHONOPTIMIZE: 1
+          PYTHONWARNINGS: default
 
       - uses: actions/upload-artifact@v3
         with:

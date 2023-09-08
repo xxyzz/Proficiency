@@ -48,6 +48,8 @@ def main() -> None:
     for lemma_code, out_f in out_files.items():
         out_f.close()
         jsonl_path = out_file_paths[lemma_code]
+        jsonl_bz2_path = jsonl_path.with_suffix(".jsonl.bz2")
+        jsonl_bz2_path.unlink(missing_ok=True)
         subprocess.run(
             ["lbzip2" if which("lbzip2") is not None else "bzip2", str(jsonl_path)],
             check=True,
