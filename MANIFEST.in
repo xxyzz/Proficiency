@@ -1,1 +1,1 @@
-include src/proficiency/data/*.json
+recursive-include src/proficiency *.json
