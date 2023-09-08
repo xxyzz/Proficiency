@@ -4,27 +4,29 @@ import logging
 import tarfile
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+from importlib.metadata import version
+from importlib.resources import files
 from pathlib import Path
 
-from create_klld import create_klld_db
-from database import wiktionary_db_path
-from extract_dbnary import (
+from .create_klld import create_klld_db
+from .database import wiktionary_db_path
+from .extract_dbnary import (
     create_lemmas_db_from_dbnary,
     download_dbnary_files,
     init_oxigraph_store,
 )
-from extract_kaikki import create_lemmas_db_from_kaikki
-from extract_kindle_lemmas import create_kindle_lemmas_db
+from .extract_kaikki import create_lemmas_db_from_kaikki
+from .extract_kindle_lemmas import create_kindle_lemmas_db
 
-VERSION = "0.5.8"
+VERSION = version("proficiency")
 MAJOR_VERSION = VERSION.split(".")[0]
 
 
-def compress(tar_path: Path, files: list[Path]) -> None:
+def compress(tar_path: Path, file_paths: list[Path]) -> None:
     if tar_path.exists():
         tar_path.unlink()
     with tarfile.open(tar_path, "x:bz2") as tar:
-        for wiktionary_file in files:
+        for wiktionary_file in file_paths:
             tar.add(wiktionary_file)
 
 
@@ -32,12 +34,12 @@ def compress_wiktionary_files(
     db_paths: list[Path], lemma_lang: str, gloss_lang: str
 ) -> None:
     compress(
-        Path(f"{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.bz2"),
+        Path(f"build/{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.bz2"),
         db_paths[:1],
     )
     if gloss_lang == "zh":
         compress(
-            Path(f"{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.bz2"),
+            Path(f"build/{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.bz2"),
             db_paths[1:],
         )
 
@@ -63,12 +65,12 @@ def create_wiktionary_files_from_dbnary(
 
 def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
     if lemma_lang == "en" and gloss_lang == "en":
-        db_path = Path(f"en/kindle_en_en_v{MAJOR_VERSION}.db")
+        db_path = Path(f"build/en/kindle_en_en_v{MAJOR_VERSION}.db")
         create_kindle_lemmas_db(db_path)
-        compress(Path(f"en/kindle_en_en_v{VERSION}.bz2"), [db_path])
+        compress(Path(f"build/en/kindle_en_en_v{VERSION}.bz2"), [db_path])
 
     klld_path = Path(
-        f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
+        f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
     )
     create_klld_db(
         wiktionary_db_path(lemma_lang, gloss_lang),
@@ -77,7 +79,7 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
         gloss_lang,
     )
     compress(
-        Path(f"{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{VERSION}.klld.bz2"),
+        Path(f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{VERSION}.klld.bz2"),
         [klld_path],
     )
 
@@ -86,9 +88,13 @@ def main() -> None:
     logging.basicConfig(
         format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
     )
-    with open("data/kaikki_languages.json", encoding="utf-8") as f:
+    with (files("proficiency") / "data" / "kaikki_languages.json").open(
+        encoding="utf-8"
+    ) as f:
         kaikki_languages = json.load(f)
-    with open("data/dbnary_languages.json") as f:
+    with (files("proficiency") / "data" / "dbnary_languages.json").open(
+        encoding="utf-8"
+    ) as f:
         dbnary_languages = json.load(f)
     gloss_languages = kaikki_languages.keys() & dbnary_languages.keys()
 
@@ -115,7 +121,8 @@ def main() -> None:
         lemma_languages = set(args.lemma_lang_codes) & avaliable_lemma_languages
         if len(lemma_languages) == 0:
             logging.error(
-                f"Invalid lemma language code, avaliable codes: {avaliable_lemma_languages}"
+                "Invalid lemma language code, avaliable codes: "
+                + str(avaliable_lemma_languages)
             )
             raise ValueError
         args.lemma_lang_codes = list(lemma_languages)

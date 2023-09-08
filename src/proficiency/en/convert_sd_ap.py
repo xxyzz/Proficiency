@@ -51,7 +51,13 @@ with open("lemmas.json", encoding="utf-8") as f:
 klld_conn = sqlite3.connect(args.klld)
 
 for lemma, sense_id, pos_type in klld_conn.execute(
-    'SELECT lemma, senses.id, pos_types.label FROM lemmas JOIN senses ON lemmas.id = display_lemma_id JOIN pos_types.id = senses.pos_type WHERE (full_def IS NOT NULL OR short_def IS NOT NULL) AND lemma NOT like "-%" ORDER BY lemma'
+    """
+    SELECT lemma, senses.id, pos_types.label
+    FROM lemmas JOIN senses ON lemmas.id = display_lemma_id
+    JOIN pos_types.id = senses.pos_type
+    WHERE (full_def IS NOT NULL OR short_def IS NOT NULL) AND lemma NOT like "-%"
+    ORDER BY lemma
+    """
 ):
     if lemma.lower() in words_dict:
         if lemma not in lemmas_dict:

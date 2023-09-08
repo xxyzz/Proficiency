@@ -3,7 +3,7 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
-from util import remove_full_stop
+from .util import remove_full_stop
 
 
 def kaikki_to_kindle_pos_id(pos: str) -> int:
@@ -113,7 +113,11 @@ def create_klld_db(
         "SELECT id, lemma_id, pos, short_def, full_def, example FROM senses"
     ):
         klld_conn.execute(
-            "INSERT INTO senses (id, display_lemma_id, term_id, term_lemma_id, pos_type, source_id, sense_number, corpus_count , short_def, full_def, example_sentence) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            """
+INSERT INTO senses (id, display_lemma_id, term_id, term_lemma_id, pos_type, source_id,
+sense_number, corpus_count , short_def, full_def, example_sentence)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
             (
                 sense_id,
                 lemma_id,

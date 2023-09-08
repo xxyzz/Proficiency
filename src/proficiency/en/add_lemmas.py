@@ -42,7 +42,14 @@ for language_layer in args.language_layers:
         "SELECT difficulty, sense_id FROM glosses GROUP by sense_id"
     ):
         for lemma, pos_type in ww_klld_conn.execute(
-            'SELECT lemma, pos_types.label FROM senses JOIN lemmas ON display_lemma_id = lemmas.id JOIN pos_types ON pos_types.id = senses.pos_type WHERE senses.id = ? AND (full_def IS NOT NULL OR short_def IS NOT NULL) AND lemma NOT like "-%"',
+            """
+            SELECT lemma, pos_types.label
+            FROM senses JOIN lemmas
+            ON display_lemma_id = lemmas.id JOIN pos_types
+            ON pos_types.id = senses.pos_type
+            WHERE senses.id = ? AND (full_def IS NOT NULL OR short_def IS NOT NULL)
+            AND lemma NOT like "-%"
+            """,
             (sense_id,),
         ):
             if lemma not in lemmas:

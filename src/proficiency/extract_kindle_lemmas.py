@@ -6,8 +6,8 @@ import sys
 from itertools import product
 from pathlib import Path
 
-from database import create_indexes_then_close, init_db
-from util import get_en_inflections
+from .database import create_indexes_then_close, init_db
+from .util import get_en_inflections
 
 
 def kindle_to_lemminflect_pos(pos: str) -> str | None:
@@ -107,7 +107,10 @@ def insert_en_data(
 ) -> None:
     lemma_id = insert_lemma(conn, lemma, lemma_ids)
     conn.execute(
-        "INSERT INTO senses (id, enabled, pos, difficulty, lemma_id) VALUES(?, ?, ?, ?, ?)",
+        """
+        INSERT INTO senses (id, enabled, pos, difficulty, lemma_id)
+        VALUES(?, ?, ?, ?, ?)
+        """,
         data + (lemma_id,),
     )
     pos = data[2]
@@ -142,7 +145,15 @@ def extract_kindle_lemmas(klld_path: str) -> None:
     with open("en/kindle_all_lemmas.csv", "w", encoding="utf-8", newline="") as f:
         csv_writer = csv.writer(f)
         for data in conn.execute(
-            "SELECT lemma, pos_types.label, senses.id, display_lemma_id FROM lemmas JOIN senses ON lemmas.id = display_lemma_id JOIN pos_types ON pos_types.id = senses.pos_type WHERE (full_def IS NOT NULL OR short_def IS NOT NULL) AND lemma NOT like '-%' ORDER BY lemma, pos_type, senses.id"
+            """
+            SELECT lemma, pos_types.label, senses.id, display_lemma_id
+            FROM lemmas
+            JOIN senses ON lemmas.id = display_lemma_id
+            JOIN pos_types ON pos_types.id = senses.pos_type
+            WHERE (full_def IS NOT NULL OR short_def IS NOT NULL)
+            AND lemma NOT like '-%'
+            ORDER BY lemma, pos_type, senses.id
+            """
         ):
             csv_writer.writerow(data)
 

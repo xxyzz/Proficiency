@@ -29,7 +29,10 @@ Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about
 ## Create files
 
 ```
-$ bash ./create_files.sh en
+$ python -m venv .venv
+$ source .venv/bin/activate.fish
+$ python -m pip install .
+$ proficiency en
 ```
 
 ## License

@@ -2,12 +2,13 @@ import json
 import platform
 import sqlite3
 import subprocess
+from importlib.resources import files
 from pathlib import Path
 
 from pyoxigraph import Store
 
-from database import create_indexes_then_close, init_db, wiktionary_db_path
-from util import (
+from .database import create_indexes_then_close, init_db, wiktionary_db_path
+from .util import (
     freq_to_difficulty,
     get_short_def,
     get_shortest_lemma_length,
@@ -16,22 +17,26 @@ from util import (
 
 
 def download_dbnary_files(gloss_lang: str) -> None:
-    with open("data/dbnary_languages.json", encoding="utf-8") as f:
+    with (files("proficiency") / "data" / "dbnary_languages.json").open(
+        encoding="utf-8"
+    ) as f:
         dbnary_languages = json.load(f)
 
     base_url = "https://kaiko.getalp.org/static/ontolex/latest"
     lang_key = gloss_lang
     if gloss_lang == "hr":
         gloss_lang = "sh"
-    download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_ontolex.ttl.bz2")
+    download_dbnary_file(f"build/{base_url}/{gloss_lang}_dbnary_ontolex.ttl.bz2")
     if dbnary_languages[lang_key]["has_exolex"]:
-        download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_exolex_ontolex.ttl.bz2")
+        download_dbnary_file(
+            f"build/{base_url}/{gloss_lang}_dbnary_exolex_ontolex.ttl.bz2"
+        )
     if dbnary_languages[lang_key]["has_morphology"]:
-        download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_morphology.ttl.bz2")
+        download_dbnary_file(f"build/{base_url}/{gloss_lang}_dbnary_morphology.ttl.bz2")
 
 
 def download_dbnary_file(url: str) -> None:
-    bz2_path = Path(f"ttl/{url.rsplit('/', 1)[-1]}")
+    bz2_path = Path(f"build/ttl/{url.rsplit('/', 1)[-1]}")
     ttl_path = bz2_path.with_suffix("")
     if not ttl_path.exists():
         subprocess.run(
@@ -66,7 +71,7 @@ def download_dbnary_file(url: str) -> None:
                 args.append("")
             args.extend(
                 [
-                    '/dcterms:bibliographicCitation  "Georges Feydeau, Le Dindon, 1896"@frC/d',
+                    '/dcterms:bibliographicCitation  "Georges Feydeau, Le Dindon, 1896"@frC/d',  # noqa: E501
                     str(ttl_path),
                 ]
             )
@@ -89,7 +94,8 @@ def insert_lemmas(
     PREFIX ontolex:  <http://www.w3.org/ns/lemon/ontolex#>
     PREFIX rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-    SELECT DISTINCT (GROUP_CONCAT(DISTINCT ?form_rep; SEPARATOR="|") AS ?word) ?pos (SAMPLE(?ipas) AS ?ipa)
+    SELECT DISTINCT (GROUP_CONCAT(DISTINCT ?form_rep; SEPARATOR="|") AS ?word)
+    ?pos (SAMPLE(?ipas) AS ?ipa)
     WHERE {{
       ?entry rdf:type ontolex:LexicalEntry ;
              ontolex:canonicalForm ?form ;
@@ -98,7 +104,8 @@ def insert_lemmas(
              lime:language '{lemma_lang}' .
       ?form ontolex:writtenRep ?form_rep .
       OPTIONAL {{ ?form ontolex:phoneticRep ?ipas . }}
-      FILTER (?pos in (lexinfo:adjective, lexinfo:adverb, lexinfo:noun, lexinfo:properNoun, lexinfo:verb)) .
+      FILTER (?pos in (lexinfo:adjective, lexinfo:adverb, lexinfo:noun,
+                       lexinfo:properNoun, lexinfo:verb)) .
       FILTER (STRLEN(STR(?form_rep)) >= {lemma_length_limit}) .
       FILTER (!REGEX(STR(?form_rep), "^\\d|'|&|\\(|\\.|-"))
     }}
@@ -106,7 +113,7 @@ def insert_lemmas(
     ORDER BY ?word ?pos
     """
 
-    for query_result in store.query(query):
+    for query_result in store.query(query):  # type: ignore
         lemmas = query_result["word"].value.split("|")
         lemma = lemmas[0]
         if lemma not in lemma_ids:
@@ -144,12 +151,13 @@ def insert_forms(
              ontolex:otherForm/ontolex:writtenRep ?form ;
              ontolex:sense ?sense ;
              lime:language "{lemma_lang}" .
-      FILTER (?pos in (lexinfo:adjective, lexinfo:adverb, lexinfo:noun, lexinfo:properNoun, lexinfo:verb)) .
+      FILTER (?pos in (lexinfo:adjective, lexinfo:adverb, lexinfo:noun,
+                       lexinfo:properNoun, lexinfo:verb)) .
       FILTER (STR(?form) != STR(?lemma))
     }}
     ORDER BY ?lemma ?pos ?form
     """
-    for query_result in store.query(query):
+    for query_result in store.query(query):  # type: ignore
         lemma = query_result["lemma"].value
         if lemma in lemma_ids:
             lemma_id = lemma_ids[lemma]
@@ -191,13 +199,14 @@ def insert_senses(
       ?sense skos:definition/rdf:value ?definition ;
              dbnary:senseNumber ?sense_number .
       OPTIONAL {{ ?sense skos:example/rdf:value ?example_sentence }} .
-      FILTER (?pos in (lexinfo:adjective, lexinfo:adverb, lexinfo:noun, lexinfo:properNoun, lexinfo:verb))
+      FILTER (?pos in (lexinfo:adjective, lexinfo:adverb, lexinfo:noun,
+                       lexinfo:properNoun, lexinfo:verb))
     }}
     GROUP BY ?lemma ?pos ?definition ?sense_number
     ORDER BY ?lemma ?pos xsd:decimal(?sense_number)
     """
 
-    for query_result in store.query(query):
+    for query_result in store.query(query):  # type: ignore
         lemma = query_result["lemma"].value
         if lemma in lemma_ids:
             lemma_id = lemma_ids[lemma]
@@ -223,7 +232,11 @@ def insert_senses(
                 if len(short_def) == 0:
                     short_def = full_def
                 conn.execute(
-                    "INSERT INTO senses (enabled, lemma_id, pos, short_def, full_def, example, difficulty) VALUES(?, ?, ?, ?, ?, ?, ?)",
+                    """
+             INSERT INTO senses
+             (enabled, lemma_id, pos, short_def, full_def, example, difficulty)
+             VALUES(?, ?, ?, ?, ?, ?, ?)
+             """,
                     (
                         enabled,
                         lemma_id,

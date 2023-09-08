@@ -14,10 +14,6 @@ env
 # python
 __pycache__
 
-kaikki.*.json
-*_zh.json
-*.bz2
-wiktionary_*.db
-kindle_*.db
-*.klld
-ttl
+build
+
+*.egg-info

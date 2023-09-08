@@ -3,13 +3,14 @@ import re
 import sqlite3
 import subprocess
 import tarfile
+from importlib.resources import files
 from io import BytesIO
 from pathlib import Path
 from typing import Any
 from urllib.request import urlopen
 
-from database import create_indexes_then_close, init_db, wiktionary_db_path
-from util import (
+from .database import create_indexes_then_close, init_db, wiktionary_db_path
+from .util import (
     freq_to_difficulty,
     get_en_inflections,
     get_short_def,
@@ -37,12 +38,14 @@ USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
 
 
 def download_kaikki_json(lang: str) -> Path:
-    with open("data/kaikki_languages.json", encoding="utf-8") as f:
+    with (files("proficiency") / "data" / "kaikki_languages.json").open(
+        encoding="utf-8"
+    ) as f:
         kaikki_languages = json.load(f)
 
     filename_lang = re.sub(r"[\s-]", "", kaikki_languages[lang])
     filename = f"kaikki.org-dictionary-{filename_lang}.json"
-    filepath = Path(f"{lang}/{filename}")
+    filepath = Path(f"build/{lang}/{filename}")
     if not filepath.exists():
         subprocess.run(
             [
@@ -60,7 +63,7 @@ def download_kaikki_json(lang: str) -> Path:
 
 
 def download_zh_json(lang: str) -> Path:
-    filepath = Path(f"{lang}/{lang}_zh.json")
+    filepath = Path(f"build/{lang}/{lang}_zh.json")
     if not filepath.exists():
         with urlopen(
             f"https://github.com/xxyzz/wiktextract/releases/latest/download/{lang}_zh.bz2"
@@ -217,14 +220,14 @@ def insert_lemma(
     if lemma_lang == "en":
         ipas_data = (
             (ipas.get("ga_ipa", ""), ipas.get("rp_ipa", ""))
-            if type(ipas) == dict
+            if isinstance(ipas, dict)
             else (ipas, "")
         )
         data = (lemma,) + ipas_data
     elif lemma_lang == "zh":
         ipas_data = (
             (ipas.get("pinyin", ""), ipas.get("bopomofo", ""))
-            if type(ipas) == dict
+            if isinstance(ipas, dict)
             else (ipas, "")
         )
         data = (lemma,) + ipas_data
@@ -252,7 +255,11 @@ def insert_senses(
     conn: sqlite3.Connection, data_list: Any, lemma_id: int, pos: str, difficulty: int
 ) -> None:
     conn.executemany(
-        "INSERT INTO senses (enabled, short_def, full_def, example, lemma_id, pos, difficulty) VALUES(?, ?, ?, ?, ?, ?, ?)",
+        """
+        INSERT INTO senses
+        (enabled, short_def, full_def, example, lemma_id, pos, difficulty)
+        VALUES(?, ?, ?, ?, ?, ?, ?)
+        """,
         (data + (lemma_id, pos, difficulty) for data in data_list),
     )
 

@@ -1,5 +1,0 @@
-lemminflect
-OpenCC
-wordfreq[mecab]
-wiktextract-lemmatization@git+https://github.com/Vuizur/wiktextract-lemmatization@37f438eb973364de4d5e70959ee1c2aa26bf5ba5
-pyoxigraph

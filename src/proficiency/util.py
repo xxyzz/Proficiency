@@ -1,7 +1,7 @@
 import json
 import re
+from importlib.resources import files
 from itertools import chain
-from pathlib import Path
 
 
 def get_shortest_lemma_length(lemma_lang: str) -> int:
@@ -34,13 +34,15 @@ def get_short_def(gloss: str, gloss_lang: str) -> str:
 def load_difficulty_data(lemma_lang: str) -> dict[str, int]:
     difficulty_data = {}
     if lemma_lang == "en":
-        with open("en/kindle_enabled_lemmas.json", encoding="utf-8") as f:
+        with (files("proficiency") / "en" / "kindle_enabled_lemmas.json").open(
+            encoding="utf-8"
+        ) as f:
             difficulty_data = {
                 lemma: values[0] for lemma, values in json.load(f).items()
             }
     else:
-        difficulty_json_path = Path(f"{lemma_lang}/difficulty.json")
-        if difficulty_json_path.exists():
+        difficulty_json_path = files("proficiency") / lemma_lang / "difficulty.json"
+        if difficulty_json_path.is_file():
             with difficulty_json_path.open(encoding="utf-8") as f:
                 difficulty_data = json.load(f)
 
