@@ -10,7 +10,6 @@ from typing import Any
 from .database import create_indexes_then_close, init_db, wiktionary_db_path
 from .util import (
     freq_to_difficulty,
-    get_en_inflections,
     get_short_def,
     get_shortest_lemma_length,
     load_difficulty_data,
@@ -336,29 +335,20 @@ def get_forms(
     from wiktextract_lemmatization.utils import FORM_TAGS_TO_IGNORE, remove_accents
 
     forms: set[str] = set()
-    if lemma_lang == "en" and gloss_lang == "zh":
-        # Extracted Chinese Wiktionary forms data are not usable yet
-        find_forms = get_en_inflections(word, LEMMINFLECT_POS_TAGS.get(pos))
-        if find_forms:
-            if word in find_forms:
-                find_forms.remove(word)
-            if find_forms:
-                forms = find_forms
-    else:
-        if lemma_lang in ["de", "da"]:  # German, Danish
-            forms_data = [
-                data
-                for data in forms_data
-                if "tags" not in data
-                or (
-                    "tags" in data
-                    and not any(tag in FORM_TAGS_TO_IGNORE for tag in data["tags"])
-                )
-            ]
+    if lemma_lang in ["de", "da"]:  # German, Danish
+        forms_data = [
+            data
+            for data in forms_data
+            if "tags" not in data
+            or (
+                "tags" in data
+                and not any(tag in FORM_TAGS_TO_IGNORE for tag in data["tags"])
+            )
+        ]
 
-        for form in map(lambda x: x.get("form", ""), forms_data):
-            if form and form != word and len(form) >= len_limit:
-                forms.add(form)
+    for form in map(lambda x: x.get("form", ""), forms_data):
+        if form and form != word and len(form) >= len_limit:
+            forms.add(form)
 
     if lemma_lang in ["ru", "uk"]:  # Russian, Ukrainian
         forms |= {remove_accents(form) for form in forms}
