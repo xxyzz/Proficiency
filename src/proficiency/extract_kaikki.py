@@ -357,11 +357,6 @@ def get_forms(
             ]
 
         for form in map(lambda x: x.get("form", ""), forms_data):
-            if gloss_lang == "zh" and (
-                form.startswith("Category:") or len(form) / len(word) > 2
-            ):
-                # temporarily filter garbage data
-                continue
             if form and form != word and len(form) >= len_limit:
                 forms.add(form)
 
