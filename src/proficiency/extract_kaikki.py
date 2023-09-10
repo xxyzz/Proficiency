@@ -137,9 +137,8 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 else:
                     enabled = False
             else:
-                difficulty = freq_to_difficulty(word, lemma_lang)
-                if difficulty == 0:
-                    difficulty = 1
+                disabled_by_freq, difficulty = freq_to_difficulty(word, lemma_lang)
+                if disabled_by_freq:
                     enabled = False
 
             if enabled:

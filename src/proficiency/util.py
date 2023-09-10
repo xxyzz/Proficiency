@@ -50,25 +50,28 @@ def load_difficulty_data(lemma_lang: str) -> dict[str, int]:
     return difficulty_data
 
 
-def freq_to_difficulty(word: str, lang: str) -> int:
+def freq_to_difficulty(word: str, lang: str) -> tuple[bool, int]:
     """
     Zipf values are between 0 and 8, `zipf_frequency()` returns 0 if word is not in the
     wordlist and the word is disabled. Zipf value greater or equal to 7 means the word
     is too common, also disable it.
 
-    Return difficulty value between 0 to 5, value 1 for the most obsure words and value
-    5 for the most common words. 0 means the word is disabled and it's difficulty level
-    is 1, because over 70% words in Wiktioanry have 0 zipf value and they are rare,
-    enable them would take a long time to create spaCy Doc file.
+    Return difficulty value between 1 to 5, value 1 for the most obsure words and value
+    5 for the most common words. Over half words in Wiktioanry have 0 zipf value and
+    they are rare, enable them would take a long time to create spaCy Doc file.
+
+    Also return `True` if the word should be disabled either too common or too rare.
     """
     from wordfreq import zipf_frequency
 
     freq = math.floor(zipf_frequency(word, lang))
-    if freq == 0 or freq >= 7:
-        return 0  # disabled
+    if freq == 0:
+        return True, 1
+    if freq >= 7:
+        return True, 5
     if freq >= 5:
-        return 5
-    return freq  # type: ignore
+        return False, 5
+    return False, freq
 
 
 def get_en_inflections(lemma: str, pos: str | None) -> set[str]:

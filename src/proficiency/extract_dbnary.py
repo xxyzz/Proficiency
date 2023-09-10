@@ -227,9 +227,8 @@ def insert_senses(
                 else:
                     enabled = False
             else:
-                difficulty = freq_to_difficulty(lemma, lemma_lang)
-                if difficulty == 0:
-                    difficulty = 1
+                disabled_by_freq, difficulty = freq_to_difficulty(lemma, lemma_lang)
+                if disabled_by_freq:
                     enabled = False
 
             if enabled:
