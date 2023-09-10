@@ -225,6 +225,9 @@ def insert_senses(
                     enabled = False
             else:
                 difficulty = freq_to_difficulty(lemma, lemma_lang)
+                if difficulty == 0:
+                    difficulty = 1
+                    enabled = False
 
             if enabled:
                 enabled_lemma_pos.add(lemma_pos)

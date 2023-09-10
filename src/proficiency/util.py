@@ -1,4 +1,5 @@
 import json
+import math
 import re
 from importlib.resources import files
 from itertools import chain
@@ -50,19 +51,24 @@ def load_difficulty_data(lemma_lang: str) -> dict[str, int]:
 
 
 def freq_to_difficulty(word: str, lang: str) -> int:
+    """
+    Zipf values are between 0 and 8, `zipf_frequency()` returns 0 if word is not in the
+    wordlist and the word is disabled. Zipf value greater or equal to 7 means the word
+    is too common, also disable it.
+
+    Return difficulty value between 0 to 5, value 1 for the most obsure words and value
+    5 for the most common words. 0 means the word is disabled and it's difficulty level
+    is 1, because over 70% words in Wiktioanry have 0 zipf value and they are rare,
+    enable them would take a long time to create spaCy Doc file.
+    """
     from wordfreq import zipf_frequency
 
-    freq = zipf_frequency(word, lang)
-    if freq >= 7:
+    freq = math.floor(zipf_frequency(word, lang))
+    if freq == 0 or freq >= 7:
+        return 0  # disabled
+    if freq >= 5:
         return 5
-    elif freq >= 5:
-        return 4
-    elif freq >= 3:
-        return 3
-    elif freq >= 1:
-        return 2
-    else:
-        return 1
+    return freq  # type: ignore
 
 
 def get_en_inflections(lemma: str, pos: str | None) -> set[str]:
@@ -72,3 +78,38 @@ def get_en_inflections(lemma: str, pos: str | None) -> set[str]:
     if not inflections and pos:
         inflections = set(chain(*getAllInflectionsOOV(lemma, pos).values()))
     return inflections
+
+
+if __name__ == "__main__":
+    import sqlite3
+    import sys
+    from pathlib import Path
+
+    from wordfreq import zipf_frequency
+
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE words (word TEXT, freq REAL, PRIMARY KEY(word, freq))")
+
+    jsonl_path = Path(sys.argv[1])
+    lang_code = sys.argv[2]
+    with jsonl_path.open(encoding="utf-8") as f:
+        for line in f:
+            data = json.loads(line)
+            word = data.get("word")
+            if word is not None:
+                freq = zipf_frequency(word, lang_code)
+                conn.execute("INSERT OR IGNORE INTO words VALUES(?, ?)", (word, freq))
+
+    for (r,) in conn.execute("SELECT count(DISTINCT word) FROM words"):
+        all_words = r
+
+    print(f"{all_words=}")
+
+    for lower_freq in range(9, -1, -1):
+        for (r,) in conn.execute(
+            "SELECT count(DISTINCT word) FROM words WHERE freq >= ? AND freq < ?",
+            (lower_freq, lower_freq + 1),
+        ):
+            print(
+                f"{lower_freq} <= freq < {lower_freq + 1}: {r}, {r / all_words * 100}"
+            )
