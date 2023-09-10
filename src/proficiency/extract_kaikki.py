@@ -60,8 +60,9 @@ def download_kaikki_json(lang: str) -> Path:
 
 
 def download_zh_json(lang: str) -> Path:
-    filepath = Path(f"build/{lang}/{lang}_zh.jsonl")
-    if not filepath.exists():
+    jsonl_path = Path(f"build/{lang}/{lang}_zh.jsonl")
+    bz2_path = jsonl_path.with_suffix(".jsonl.bz2")
+    if not bz2_path.exists() and not jsonl_path.exists():
         subprocess.run(
             [
                 "wget",
@@ -74,16 +75,17 @@ def download_zh_json(lang: str) -> Path:
             capture_output=True,
             text=True,
         )
+    if bz2_path.exists() and not jsonl_path.exists():
         subprocess.run(
             [
                 "lbunzip2" if which("lbunzip2") is not None else "bunzip2",
-                str(filepath.with_suffix(".jsonl.bz2")),
+                str(bz2_path),
             ],
             check=True,
             capture_output=True,
             text=True,
         )
-    return filepath
+    return jsonl_path
 
 
 def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:

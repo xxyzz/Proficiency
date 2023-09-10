@@ -37,19 +37,22 @@ def download_dbnary_files(gloss_lang: str) -> None:
 def download_dbnary_file(url: str) -> None:
     bz2_path = Path(f"build/ttl/{url.rsplit('/', 1)[-1]}")
     ttl_path = bz2_path.with_suffix("")
-    if not ttl_path.exists():
+    ttl_exists = ttl_path.exists()
+    if not bz2_path.exists() and not ttl_path.exists():
         subprocess.run(
             ["wget", "-nv", "-P", "build/ttl", url],
             check=True,
             text=True,
             capture_output=True,
         )
+    if bz2_path.exists() and not ttl_path.exists():
         subprocess.run(
             ["lbunzip2" if which("lbunzip2") is not None else "bunzip2", str(bz2_path)],
             check=True,
             text=True,
             capture_output=True,
         )
+    if not ttl_exists:
         # remove private use area characters that cause invalid IRI error
         # https://www.unicode.org/charts/PDF/UE000.pdf
         subprocess.run(
