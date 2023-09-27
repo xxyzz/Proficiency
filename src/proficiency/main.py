@@ -1,12 +1,13 @@
 import argparse
 import json
 import logging
-import tarfile
+import subprocess
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from importlib.metadata import version
 from importlib.resources import files
 from pathlib import Path
+from shutil import which
 
 from .create_klld import create_klld_db
 from .database import wiktionary_db_path
@@ -22,30 +23,33 @@ VERSION = version("proficiency")
 MAJOR_VERSION = VERSION.split(".")[0]
 
 
-def compress(tar_path: Path, file_paths: list[Path]) -> None:
-    if tar_path.exists():
-        tar_path.unlink()
-    with tarfile.open(tar_path, "x:bz2") as tar:
-        for wiktionary_file in file_paths:
-            tar.add(wiktionary_file)
+def compress(file_path: Path, bz2_path: Path) -> None:
+    default_compressed_path = file_path.with_suffix(file_path.suffix + ".bz2")
+    for compressed_path in (bz2_path, default_compressed_path):
+        compressed_path.unlink(missing_ok=True)
+
+    subprocess.run(
+        ["lbzip2" if which("lbzip2") is not None else "bzip2", str(file_path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    default_compressed_path.replace(bz2_path)
 
 
 def compress_wiktionary_files(
     db_paths: list[Path], lemma_lang: str, gloss_lang: str
 ) -> None:
-    compress(
-        Path(
-            f"build/{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.tar.bz2"
-        ),
-        db_paths[:1],
-    )
-    if gloss_lang == "zh":
-        compress(
-            Path(
-                f"build/{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.tar.bz2"
-            ),
-            db_paths[1:],
-        )
+    for index, db_path in enumerate(db_paths):
+        if index == 1 and gloss_lang == "zh":
+            compressed_path = Path(
+                f"build/{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.bz2"
+            )
+        else:
+            compressed_path = Path(
+                f"build/{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.bz2"
+            )
+        compress(db_path, compressed_path)
 
 
 def create_wiktionary_files_from_kaikki(
@@ -71,7 +75,7 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
     if lemma_lang == "en" and gloss_lang == "en":
         db_path = Path(f"build/en/kindle_en_en_v{MAJOR_VERSION}.db")
         create_kindle_lemmas_db(db_path)
-        compress(Path(f"build/en/kindle_en_en_v{VERSION}.tar.bz2"), [db_path])
+        compress(db_path, Path(f"build/en/kindle_en_en_v{VERSION}.bz2"))
 
     klld_path = Path(
         f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
@@ -83,10 +87,8 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
         gloss_lang,
     )
     compress(
-        Path(
-            f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{VERSION}.klld.tar.bz2"
-        ),
-        [klld_path],
+        klld_path,
+        Path(f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{VERSION}.klld.bz2"),
     )
 
 
