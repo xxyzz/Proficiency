@@ -23,40 +23,22 @@ VERSION = version("proficiency")
 MAJOR_VERSION = VERSION.split(".")[0]
 
 
-def compress(file_path: Path, bz2_path: Path) -> None:
-    default_compressed_path = file_path.with_suffix(file_path.suffix + ".bz2")
-    for compressed_path in (bz2_path, default_compressed_path):
-        compressed_path.unlink(missing_ok=True)
-
+def compress(file_path: Path) -> None:
+    compressed_path = file_path.with_suffix(file_path.suffix + ".bz2")
+    compressed_path.unlink(missing_ok=True)
     subprocess.run(
-        ["lbzip2" if which("lbzip2") is not None else "bzip2", str(file_path)],
+        ["lbzip2" if which("lbzip2") is not None else "bzip2", "-k", str(file_path)],
         check=True,
         capture_output=True,
         text=True,
     )
-    default_compressed_path.replace(bz2_path)
-
-
-def compress_wiktionary_files(
-    db_paths: list[Path], lemma_lang: str, gloss_lang: str
-) -> None:
-    for index, db_path in enumerate(db_paths):
-        if index == 1 and gloss_lang == "zh":
-            compressed_path = Path(
-                f"build/{lemma_lang}/wiktionary_{lemma_lang}_zh_cn_v{VERSION}.bz2"
-            )
-        else:
-            compressed_path = Path(
-                f"build/{lemma_lang}/wiktionary_{lemma_lang}_{gloss_lang}_v{VERSION}.bz2"
-            )
-        compress(db_path, compressed_path)
 
 
 def create_wiktionary_files_from_kaikki(
     lemma_lang: str, gloss_lang: str = "en"
 ) -> None:
-    db_paths = create_lemmas_db_from_kaikki(lemma_lang, gloss_lang)
-    compress_wiktionary_files(db_paths, lemma_lang, gloss_lang)
+    for db_path in create_lemmas_db_from_kaikki(lemma_lang, gloss_lang):
+        compress(db_path)
 
 
 def create_wiktionary_files_from_dbnary(
@@ -65,17 +47,17 @@ def create_wiktionary_files_from_dbnary(
     download_dbnary_files(gloss_lang)
     store, has_morphology = init_oxigraph_store(gloss_lang)
     for lemma_lang in lemma_langs:
-        db_paths = create_lemmas_db_from_dbnary(
+        for db_path in create_lemmas_db_from_dbnary(
             store, lemma_lang, gloss_lang, has_morphology
-        )
-        compress_wiktionary_files(db_paths, lemma_lang, gloss_lang)
+        ):
+            compress(db_path)
 
 
 def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
     if lemma_lang == "en" and gloss_lang == "en":
         db_path = Path(f"build/en/kindle_en_en_v{MAJOR_VERSION}.db")
         create_kindle_lemmas_db(db_path)
-        compress(db_path, Path(f"build/en/kindle_en_en_v{VERSION}.bz2"))
+        compress(db_path)
 
     klld_path = Path(
         f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
@@ -86,10 +68,7 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
         lemma_lang,
         gloss_lang,
     )
-    compress(
-        klld_path,
-        Path(f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{VERSION}.klld.bz2"),
-    )
+    compress(klld_path)
 
 
 def main() -> None:
