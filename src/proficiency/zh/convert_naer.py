@@ -35,19 +35,19 @@ def main() -> None:
                 first_row = False
                 continue
             word = row[1]
-            last_chracter = word[-1]
-            if last_chracter.isdigit():
+            last_character = word[-1]
+            if last_character.isdigit():
                 word = word[:-1]
-                if int(last_chracter) > 1:
+                if int(last_character) > 1:
                     continue
             if len(word) < 2:
                 continue
             level = row[3]
             difficulty = convert_difficulty(level)
             if "/" in word:
-                for splited_word in word.split("/"):
-                    if len(splited_word) >= 2:
-                        words[splited_word] = difficulty
+                for split_word in word.split("/"):
+                    if len(split_word) >= 2:
+                        words[split_word] = difficulty
             elif "(" in word:
                 words[re.sub(r"[()]", "", word)] = difficulty
                 words[re.sub(r"\([^)]+\)", "", word)] = difficulty

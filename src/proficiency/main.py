@@ -95,21 +95,21 @@ def main() -> None:
     )
     args = parser.parse_args()
     if args.gloss_lang not in ["en", "zh"]:
-        avaliable_lemma_languages: set[str] = set()
+        available_lemma_languages: set[str] = set()
         if dbnary_languages[args.gloss_lang]["has_exolex"]:
             if "lemma_languages" in dbnary_languages[args.gloss_lang]:
-                avaliable_lemma_languages = set(
+                available_lemma_languages = set(
                     dbnary_languages[args.gloss_lang]["lemma_languages"]
                 )
             else:
-                avaliable_lemma_languages = set(kaikki_languages.keys())
+                available_lemma_languages = set(kaikki_languages.keys())
         else:
-            avaliable_lemma_languages = {args.gloss_lang}
-        lemma_languages = set(args.lemma_lang_codes) & avaliable_lemma_languages
+            available_lemma_languages = {args.gloss_lang}
+        lemma_languages = set(args.lemma_lang_codes) & available_lemma_languages
         if len(lemma_languages) == 0:
             logging.error(
-                "Invalid lemma language code, avaliable codes: "
-                + str(avaliable_lemma_languages)
+                "Invalid lemma language code, available codes: "
+                + str(available_lemma_languages)
             )
             raise ValueError
         args.lemma_lang_codes = list(lemma_languages)

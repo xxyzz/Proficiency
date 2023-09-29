@@ -56,7 +56,7 @@ def freq_to_difficulty(word: str, lang: str) -> tuple[bool, int]:
     wordlist and the word is disabled. Zipf value greater or equal to 7 means the word
     is too common, also disable it.
 
-    Return difficulty value between 1 to 5, value 1 for the most obsure words and value
+    Return difficulty value between 1 to 5, value 1 for the most obscure words and value
     5 for the most common words. Over half words in Wiktioanry have 0 zipf value and
     they are rare, enable them would take a long time to create spaCy Doc file.
 
