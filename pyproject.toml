@@ -22,7 +22,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "isort",
     "black",
     "mypy",
     "ruff",
@@ -54,3 +53,11 @@ ignore_missing_imports = true
 [tool.typos]
 type.csv.check-file = false
 type.json.check-file = false
+
+[tool.ruff]
+select = [
+    "E",  # pycodestyle error
+    "F",  # Pyflakes
+    "I",  # isort
+    "W",  # pycodestyle warning
+]
