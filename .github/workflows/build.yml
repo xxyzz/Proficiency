@@ -32,7 +32,7 @@ jobs:
       - name: Install package
         run: |
           # remove mecab once "mecab-python3" releases 3.12 wheels
-          sudo apt install -y lbzip2 mecab
+          sudo apt install -y lbzip2 mecab libmecab-dev
           python -m pip install .
 
       - name: Create files
