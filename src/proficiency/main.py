@@ -21,6 +21,7 @@ from .extract_kindle_lemmas import create_kindle_lemmas_db
 
 VERSION = version("proficiency")
 MAJOR_VERSION = VERSION.split(".")[0]
+WIKITEXTRACT_LANGUAGES = frozenset(["en", "zh", "fr"])
 
 
 def compress(file_path: Path) -> None:
@@ -94,7 +95,7 @@ def main() -> None:
         choices=kaikki_languages.keys(),
     )
     args = parser.parse_args()
-    if args.gloss_lang not in ["en", "zh"]:
+    if args.gloss_lang not in WIKITEXTRACT_LANGUAGES:
         available_lemma_languages: set[str] = set()
         if dbnary_languages[args.gloss_lang]["has_exolex"]:
             if "lemma_languages" in dbnary_languages[args.gloss_lang]:
@@ -116,7 +117,7 @@ def main() -> None:
 
     with ProcessPoolExecutor() as executor:
         logging.info("Creating Wiktionary files")
-        if args.gloss_lang in ["en", "zh"]:
+        if args.gloss_lang in WIKITEXTRACT_LANGUAGES:
             for _ in executor.map(
                 partial(
                     create_wiktionary_files_from_kaikki, gloss_lang=args.gloss_lang

@@ -59,8 +59,8 @@ def download_kaikki_json(lang: str) -> Path:
     return filepath
 
 
-def download_zh_json(lang: str) -> Path:
-    jsonl_path = Path(f"build/{lang}/{lang}_zh.jsonl")
+def download_non_en_json(lemma_lang: str, gloss_lang: str) -> Path:
+    jsonl_path = Path(f"build/{lemma_lang}/{lemma_lang}_{gloss_lang}.jsonl")
     bz2_path = jsonl_path.with_suffix(".jsonl.bz2")
     if not bz2_path.exists() and not jsonl_path.exists():
         subprocess.run(
@@ -68,8 +68,8 @@ def download_zh_json(lang: str) -> Path:
                 "wget",
                 "-nv",
                 "-P",
-                f"build/{lang}",
-                f"https://github.com/xxyzz/wiktextract/releases/latest/download/{lang}_zh.jsonl.bz2",
+                f"build/{lemma_lang}",
+                f"https://github.com/xxyzz/wiktextract/releases/latest/download/{bz2_path.name}",
             ],
             check=True,
             capture_output=True,
@@ -92,7 +92,9 @@ def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
     if gloss_lang == "en":
         kaikki_json_path = download_kaikki_json(lemma_lang)
     else:
-        kaikki_json_path = download_zh_json("sh" if lemma_lang == "hr" else lemma_lang)
+        kaikki_json_path = download_non_en_json(
+            "sh" if lemma_lang == "hr" else lemma_lang, gloss_lang
+        )
 
     difficulty_data = load_difficulty_data(lemma_lang)
     return kaikki_json_path, difficulty_data
@@ -308,7 +310,9 @@ def get_ipas(lang: str, sounds: list[dict[str, str]]) -> dict[str, str] | str:
             if "Mandarin" in tags:
                 if "Pinyin" in tags and "Pinyin" not in ipas:
                     ipas["pinyin"] = pron
-                elif "bopomofo" in tags and "bopomofo" not in ipas:
+                elif (
+                    "bopomofo" in tags or "Zhuyin" in tags
+                ) and "bopomofo" not in ipas:
                     ipas["bopomofo"] = pron
     else:
         for sound in sounds:

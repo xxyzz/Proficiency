@@ -1,5 +1,4 @@
 import json
-import platform
 import sqlite3
 import subprocess
 from importlib.resources import files
@@ -65,23 +64,6 @@ def download_dbnary_file(url: str) -> None:
             # Fix parse subtag error
             subprocess.run(
                 ["perl", "-C", "-pi", "-e", "s/es-.+-ipa/es-fonipa/g", str(ttl_path)],
-                check=True,
-                text=True,
-                capture_output=True,
-            )
-        if ttl_path.name == "fr_dbnary_ontolex.ttl":
-            # Remove invalid line in fr file created at 2023-02-21 01:29
-            args = ["sed", "-i"]
-            if platform.system() == "Darwin":
-                args.append("")
-            args.extend(
-                [
-                    '/dcterms:bibliographicCitation  "Georges Feydeau, Le Dindon, 1896"@frC/d',  # noqa: E501
-                    str(ttl_path),
-                ]
-            )
-            subprocess.run(
-                args,
                 check=True,
                 text=True,
                 capture_output=True,
