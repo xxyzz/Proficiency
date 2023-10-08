@@ -26,13 +26,14 @@ jobs:
 
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
 
       - name: Install package
         run: |
+          # remove mecab once "mecab-python3" releases 3.12 wheels
+          sudo apt install -y lbzip2 mecab
           python -m pip install .
-          sudo apt install lbzip2
 
       - name: Create files
         run: proficiency ${{ matrix.gloss_lang }}
