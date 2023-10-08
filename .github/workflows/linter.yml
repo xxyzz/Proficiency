@@ -28,4 +28,4 @@ jobs:
       - run: python -m black --check .
       - run: python -m mypy -p proficiency
       - run: python -m ruff .
-      - uses: crate-ci/typos@v1.16.15
+      - uses: crate-ci/typos@v1.16.17
