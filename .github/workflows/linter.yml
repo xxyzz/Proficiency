@@ -3,6 +3,8 @@ name: Lint Code Base
 on:
   workflow_dispatch:
   push:
+    branches:  # ignore pushed tags
+      - "*"
     paths:
       - '**.py'
       - '**.md'

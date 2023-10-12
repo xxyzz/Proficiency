@@ -3,6 +3,8 @@ name: Create files
 on:
   workflow_dispatch:
   push:
+    branches:  # ignore pushed tags
+      - "*"
     paths-ignore:
       - '**.md'
   pull_request:
