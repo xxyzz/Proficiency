@@ -175,10 +175,17 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                     continue
 
                 for example in examples:
-                    example = example.get("text")
-                    if example and example != "(obsolete)":
+                    # Use the first example
+                    example = example.get("text", "")
+                    if len(example) > 0 and example != "(obsolete)":
                         example_sent = example
                         break
+                    # Chinese Wiktionary
+                    example_texts = example.get("texts", [])
+                    if len(example_texts) > 0:
+                        example_sent = example_texts[0]
+                        break
+
                 short_gloss = get_short_def(gloss, gloss_lang)
                 if not short_gloss:
                     continue
@@ -189,7 +196,9 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                             enabled,
                             converter.convert(short_gloss),
                             converter.convert(gloss),
-                            example_sent if example_sent is not None else None,
+                            converter.convert(example_sent)
+                            if example_sent is not None
+                            else None,
                         )
                     )
                 enabled = False
