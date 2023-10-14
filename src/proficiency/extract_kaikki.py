@@ -127,6 +127,7 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 pos not in USED_POS_TYPES
                 or len(word) < len_limit
                 or re.match(r"\W|\d", word)
+                or is_form_entry(gloss_lang, data)
             ):
                 continue
 
@@ -161,7 +162,7 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 examples = sense.get("examples", [])
                 glosses = sense.get("glosses")
                 example_sent = None
-                if not glosses:
+                if not glosses or is_form_entry(gloss_lang, sense):
                     continue
                 gloss = glosses[1] if len(glosses) > 1 else glosses[0]
                 if (
@@ -174,14 +175,14 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 if tags.intersection(FILTER_TAGS):
                     continue
 
-                for example in examples:
+                for example_data in examples:
                     # Use the first example
-                    example = example.get("text", "")
-                    if len(example) > 0 and example != "(obsolete)":
-                        example_sent = example
+                    example_text = example_data.get("text", "")
+                    if len(example_text) > 0 and example_text != "(obsolete)":
+                        example_sent = example_text
                         break
                     # Chinese Wiktionary
-                    example_texts = example.get("texts", [])
+                    example_texts = example_data.get("texts", [])
                     if len(example_texts) > 0:
                         example_sent = example_texts[0]
                         break
@@ -370,3 +371,16 @@ def get_forms(
     if lemma_lang in ["ru", "uk"]:  # Russian, Ukrainian
         forms |= {remove_accents(form) for form in forms}
     return forms
+
+
+ZH_FORMS_CAT_SUFFIXES = ("變格形", "變位形式", "複數形式")
+FR_FORMS_CAT_PREFIXES = ("Formes",)
+
+
+def is_form_entry(gloss_lang: str, sense_data: dict[str, list[str]]) -> bool:
+    for category in sense_data.get("categories", []):
+        if gloss_lang == "zh" and category.endswith(ZH_FORMS_CAT_SUFFIXES):
+            return True
+        if gloss_lang == "fr" and category.startswith(FR_FORMS_CAT_PREFIXES):
+            return True
+    return False

@@ -53,6 +53,7 @@ ignore_missing_imports = true
 [tool.typos]
 type.csv.check-file = false
 type.json.check-file = false
+default.extend-words = {"Formes" = "Formes"}
 
 [tool.ruff]
 select = [
