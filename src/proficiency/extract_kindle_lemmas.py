@@ -7,9 +7,6 @@ from importlib.resources import files
 from itertools import product
 from pathlib import Path
 
-from .database import create_indexes_then_close, init_db
-from .util import get_en_inflections
-
 
 def kindle_to_lemminflect_pos(pos: str) -> str | None:
     # https://lemminflect.readthedocs.io/en/latest/tags
@@ -29,6 +26,8 @@ def kindle_to_lemminflect_pos(pos: str) -> str | None:
 
 
 def get_en_lemma_forms(lemma: str, pos: str | None) -> set[str]:
+    from .util import get_en_inflections
+
     if " " in lemma:
         if "/" in lemma:  # "be/get togged up/out"
             words = [word.split("/") for word in lemma.split()]
@@ -66,6 +65,8 @@ def transform_lemma(lemma: str) -> set[str]:
 
 
 def create_kindle_lemmas_db(db_path: Path) -> None:
+    from .database import create_indexes_then_close, init_db
+
     with (files("proficiency") / "en" / "kindle_enabled_lemmas.json").open(
         encoding="utf-8"
     ) as f:
@@ -148,9 +149,10 @@ def insert_en_data(
 def extract_kindle_lemmas(klld_path: str) -> None:
     conn = sqlite3.connect(klld_path)
     with open("en/kindle_all_lemmas.csv", "w", encoding="utf-8", newline="") as f:
-        csv_writer = csv.writer(f)
-        for data in conn.execute(
-            """
+        csv_writer = csv.writer(f, lineterminator="\n")
+        csv_writer.writerows(
+            conn.execute(
+                """
             SELECT lemma, pos_types.label, senses.id, display_lemma_id
             FROM lemmas
             JOIN senses ON lemmas.id = display_lemma_id
@@ -159,8 +161,9 @@ def extract_kindle_lemmas(klld_path: str) -> None:
             AND lemma NOT like '-%'
             ORDER BY lemma, pos_type, senses.id
             """
-        ):
-            csv_writer.writerow(data)
+            )
+        )
+        conn.close()
 
 
 if __name__ == "__main__":
