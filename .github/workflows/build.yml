@@ -43,7 +43,7 @@ jobs:
           PYTHONOPTIMIZE: 1
           PYTHONWARNINGS: default
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.gloss_lang }}_gloss
           if-no-files-found: error
