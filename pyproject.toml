@@ -22,7 +22,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "black",
     "mypy",
     "ruff",
 ]
