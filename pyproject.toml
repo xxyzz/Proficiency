@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Proficiency"
-version = "0.5.11"
+version = "0.5.12"
 authors = [
     {name = "xxyzz"}
 ]
@@ -28,7 +28,6 @@ dev = [
 
 [project.scripts]
 proficiency = "proficiency.main:main"
-split_jsonl = "proficiency.split_jsonl:main"
 
 [tool.setuptools]
 zip-safe = false

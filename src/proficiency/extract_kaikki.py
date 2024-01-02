@@ -59,32 +59,37 @@ def download_kaikki_json(lang: str) -> Path:
     return filepath
 
 
-def download_non_en_json(lemma_lang: str, gloss_lang: str) -> Path:
-    jsonl_path = Path(f"build/{lemma_lang}/{lemma_lang}_{gloss_lang}.jsonl")
-    bz2_path = jsonl_path.with_suffix(".jsonl.bz2")
-    if not bz2_path.exists() and not jsonl_path.exists():
+def download_kaikki_non_en_json(gloss_lang: str) -> Path:
+    from .split_jsonl import split_kaikki_non_en_jsonl
+
+    jsonl_path = Path(f"build/{gloss_lang}-extract.json")
+    gz_path = jsonl_path.with_suffix(".json.gz")
+    if not gz_path.exists() and not jsonl_path.exists():
         subprocess.run(
             [
                 "wget",
                 "-nv",
                 "-P",
-                f"build/{lemma_lang}",
-                f"https://github.com/xxyzz/wiktextract/releases/latest/download/{bz2_path.name}",
+                "build",
+                f"https://kaikki.org/dictionary/downloads/{gloss_lang}/{gloss_lang}-extract.json.gz",
             ],
             check=True,
             capture_output=True,
             text=True,
         )
-    if bz2_path.exists() and not jsonl_path.exists():
+    if gz_path.exists() and not jsonl_path.exists():
         subprocess.run(
             [
-                "lbunzip2" if which("lbunzip2") is not None else "bunzip2",
-                str(bz2_path),
+                "pigz" if which("pigz") is not None else "gzip",
+                "-d",
+                str(gz_path),
             ],
             check=True,
             capture_output=True,
             text=True,
         )
+        split_kaikki_non_en_jsonl(jsonl_path, gloss_lang)
+
     return jsonl_path
 
 
@@ -92,9 +97,9 @@ def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
     if gloss_lang == "en":
         kaikki_json_path = download_kaikki_json(lemma_lang)
     else:
-        kaikki_json_path = download_non_en_json(
-            "sh" if lemma_lang == "hr" else lemma_lang, gloss_lang
-        )
+        if lemma_lang == "hr":
+            lemma_lang = "sh"
+        kaikki_json_path = Path(f"build/{lemma_lang}/{lemma_lang}_{gloss_lang}.jsonl")
 
     difficulty_data = load_difficulty_data(lemma_lang)
     return kaikki_json_path, difficulty_data

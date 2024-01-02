@@ -26,6 +26,8 @@ Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about
 
 - [oxigraph](https://github.com/oxigraph/oxigraph)
 
+- pigz or gzip
+
 ## Create files
 
 ```

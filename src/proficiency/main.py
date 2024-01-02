@@ -16,7 +16,7 @@ from .extract_dbnary import (
     download_dbnary_files,
     init_oxigraph_store,
 )
-from .extract_kaikki import create_lemmas_db_from_kaikki
+from .extract_kaikki import create_lemmas_db_from_kaikki, download_kaikki_non_en_json
 from .extract_kindle_lemmas import create_kindle_lemmas_db
 
 VERSION = version("proficiency")
@@ -118,6 +118,8 @@ def main() -> None:
     with ProcessPoolExecutor() as executor:
         logging.info("Creating Wiktionary files")
         if args.gloss_lang in WIKITEXTRACT_LANGUAGES:
+            if args.gloss_lang != "en":
+                download_kaikki_non_en_json(args.gloss_lang)
             for _ in executor.map(
                 partial(
                     create_wiktionary_files_from_kaikki, gloss_lang=args.gloss_lang
