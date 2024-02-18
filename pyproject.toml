@@ -53,7 +53,7 @@ type.csv.check-file = false
 type.json.check-file = false
 default.extend-words = {"Formes" = "Formes"}
 
-[tool.ruff]
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle error
     "F",  # Pyflakes
