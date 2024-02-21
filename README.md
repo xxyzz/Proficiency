@@ -29,12 +29,28 @@ Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about
 - pigz or gzip
 
 ## Create files
-
+**Unix**:
 ```
 $ python -m venv .venv
 $ source .venv/bin/activate.fish
 $ python -m pip install .
 $ proficiency en
+```
+
+**Windows**:
+
+First install wget with
+```
+winget install -e --id JernejSimoncic.Wget
+```
+and re-open the console window.
+
+Then activate Python and run the program:
+```
+python -m venv .venv
+.\.venv\Scripts\activate
+python -m pip install .
+proficiency en
 ```
 
 ## License

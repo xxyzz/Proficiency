@@ -78,16 +78,23 @@ def download_kaikki_non_en_json(gloss_lang: str) -> Path:
             text=True,
         )
     if gz_path.exists() and not jsonl_path.exists():
-        subprocess.run(
-            [
-                "pigz" if which("pigz") is not None else "gzip",
-                "-d",
-                str(gz_path),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        if which("pigz") is None and which("gzip") is None:
+            import gzip
+            import shutil
+
+            with gzip.open(gz_path, "rb") as f_in, open(jsonl_path, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        else:
+            subprocess.run(
+                [
+                    "pigz" if which("pigz") is not None else "gzip",
+                    "-d",
+                    str(gz_path),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
         split_kaikki_non_en_jsonl(jsonl_path, gloss_lang)
 
     return jsonl_path
@@ -202,9 +209,11 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                             enabled,
                             converter.convert(short_gloss),
                             converter.convert(gloss),
-                            converter.convert(example_sent)
-                            if example_sent is not None
-                            else None,
+                            (
+                                converter.convert(example_sent)
+                                if example_sent is not None
+                                else None
+                            ),
                         )
                     )
                 enabled = False
