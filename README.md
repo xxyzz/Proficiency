@@ -10,7 +10,7 @@ Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about
 
 - Python
 
-- wget: download files
+- [Wget](https://www.gnu.org/software/wget)
 
 - [lemminflect](https://github.com/bjascob/LemmInflect): inflect English words
 
@@ -20,16 +20,16 @@ Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about
 
 - [wiktextract-lemmatization](https://github.com/Vuizur/wiktextract-lemmatization): remove [stress](https://en.wikipedia.org/wiki/Stress_(linguistics))
 
-- perl, sed: Remove invalid text
+- [Perl](https://www.perl.org): Remove invalid text in Dbnary files
 
-- lbunzip2 or bunzip2
+- lbzip2 or bzip2
 
 - [oxigraph](https://github.com/oxigraph/oxigraph)
 
 - pigz or gzip
 
 ## Create files
-**Unix**:
+
 ```
 $ python -m venv .venv
 $ source .venv/bin/activate.fish
@@ -37,21 +37,7 @@ $ python -m pip install .
 $ proficiency en
 ```
 
-**Windows**:
-
-First install wget with
-```
-winget install -e --id JernejSimoncic.Wget
-```
-and re-open the console window.
-
-Then activate Python and run the program:
-```
-python -m venv .venv
-.\.venv\Scripts\activate
-python -m pip install .
-proficiency en
-```
+Change the [venv](https://docs.python.org/3/library/venv.html) invoke command according to your shell.
 
 ## License
 

@@ -45,12 +45,21 @@ def download_dbnary_file(url: str) -> None:
             capture_output=True,
         )
     if bz2_path.exists() and not ttl_path.exists():
-        subprocess.run(
-            ["lbunzip2" if which("lbunzip2") is not None else "bunzip2", str(bz2_path)],
-            check=True,
-            text=True,
-            capture_output=True,
-        )
+        if which("lbunzip2") is None and which("bunzip2") is None:
+            import bz2
+
+            with bz2.open(bz2_path, "rb") as f_in, ttl_path.open("wb") as f_out:
+                f_out.write(f_in.read())
+        else:
+            subprocess.run(
+                [
+                    "lbunzip2" if which("lbunzip2") is not None else "bunzip2",
+                    str(bz2_path),
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
     if not ttl_exists:
         # remove private use area characters that cause invalid IRI error
         # https://www.unicode.org/charts/PDF/UE000.pdf
