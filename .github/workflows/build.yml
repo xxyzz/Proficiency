@@ -37,6 +37,9 @@ jobs:
           sudo apt install -y lbzip2 mecab libmecab-dev
           python -m pip install .
 
+      - name: Run tests
+        run: python -m unittest discover -b -s tests
+
       - name: Create files
         run: proficiency ${{ matrix.gloss_lang }}
         env:

@@ -16,14 +16,30 @@ def remove_full_stop(text: str) -> str:
     return text.removesuffix(".").removesuffix("。")
 
 
+def remove_parentheses(text: str) -> str:
+    # supports nested parentheses
+    left_bracket_count = 0
+    result = ""
+    for char in text:
+        if char == "(":
+            left_bracket_count += 1
+        elif char == ")":
+            left_bracket_count -= 1
+        elif left_bracket_count == 0:
+            result += char
+    return result.replace("  ", " ")
+
+
 def get_short_def(gloss: str, gloss_lang: str) -> str:
     gloss = remove_full_stop(gloss)
+    if "(" in gloss:
+        gloss = remove_parentheses(gloss)
     gloss = re.sub(
-        r"\([^)]+\)|（[^）]+）|〈[^〉]+〉|\[[^]]+\]|［[^］]+］|【[^】]+】|﹝[^﹞]+﹞|「[^」]+」",
+        r"（[^）]+）|〈[^〉]+〉|\[[^]]+\]|［[^］]+］|【[^】]+】|﹝[^﹞]+﹞|「[^」]+」",
         "",
         gloss,
     )
-    gloss = min(re.split(";|；", gloss), key=len)
+    gloss = min(re.split(";|；|,", gloss), key=len)
     gloss = min(gloss.split("/"), key=len)
     if gloss_lang == "zh":
         gloss = min(gloss.split("、"), key=len)
