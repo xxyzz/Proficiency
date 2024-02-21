@@ -27,12 +27,27 @@ WIKITEXTRACT_LANGUAGES = frozenset(["en", "zh", "fr"])
 def compress(file_path: Path) -> None:
     compressed_path = file_path.with_suffix(file_path.suffix + ".bz2")
     compressed_path.unlink(missing_ok=True)
-    subprocess.run(
-        ["lbzip2" if which("lbzip2") is not None else "bzip2", "-k", str(file_path)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+
+    if which("lbzip2") is None and which("bzip2") is None:
+        import bz2
+
+        # Use pure python implementation of bzip2 compression
+        with open(file_path, "rb") as input_file:
+            data = input_file.read()
+            compressed_data = bz2.compress(data)
+            with open(compressed_path, "wb") as output_file:
+                output_file.write(compressed_data)
+    else:
+        subprocess.run(
+            [
+                "lbzip2" if which("lbzip2") is not None else "bzip2",
+                "-k",
+                str(file_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
 
 
 def create_wiktionary_files_from_kaikki(
