@@ -5,26 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "Proficiency"
 version = "0.5.12"
-authors = [
-    {name = "xxyzz"}
-]
+authors = [{ name = "xxyzz" }]
 description = "Create language files for WordDumb."
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "GNU General Public License v3 or later (GPLv3+)"}
+license = { text = "GNU General Public License v3 or later (GPLv3+)" }
 dependencies = [
     "lemminflect",
     "OpenCC",
     "wordfreq[mecab]",
     "wiktextract-lemmatization @ git+https://github.com/Vuizur/wiktextract-lemmatization@37f438eb973364de4d5e70959ee1c2aa26bf5ba5",
     "pyoxigraph",
+    # mecab with prerelease version for 3.12 wheels
+    "mecab-python3>=1.0.9.dev4 ; platform_system == 'Windows'",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "mypy",
-    "ruff",
-]
+dev = ["mypy", "ruff"]
 
 [project.scripts]
 proficiency = "proficiency.main:main"
@@ -51,12 +48,12 @@ ignore_missing_imports = true
 [tool.typos]
 type.csv.check-file = false
 type.json.check-file = false
-default.extend-words = {"Formes" = "Formes"}
+default.extend-words = { "Formes" = "Formes" }
 
 [tool.ruff.lint]
 select = [
-    "E",  # pycodestyle error
-    "F",  # Pyflakes
-    "I",  # isort
-    "W",  # pycodestyle warning
+    "E", # pycodestyle error
+    "F", # Pyflakes
+    "I", # isort
+    "W", # pycodestyle warning
 ]
