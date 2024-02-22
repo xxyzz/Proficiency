@@ -62,17 +62,12 @@ def download_kaikki_json(lang: str) -> Path:
 def download_kaikki_non_en_json(gloss_lang: str) -> Path:
     from .split_jsonl import split_kaikki_non_en_jsonl
 
-    jsonl_path = Path(f"build/{gloss_lang}-extract.json")
-    gz_path = jsonl_path.with_suffix(".json.gz")
+    url = f"https://kaikki.org/{gloss_lang}wiktionary/raw-wiktextract-data.json.gz"
+    gz_path = Path(f"build/{url.rsplit('/', 1)[1]}")
+    jsonl_path = gz_path.with_suffix("")
     if not gz_path.exists() and not jsonl_path.exists():
         subprocess.run(
-            [
-                "wget",
-                "-nv",
-                "-P",
-                "build",
-                f"https://kaikki.org/dictionary/downloads/{gloss_lang}/{gloss_lang}-extract.json.gz",
-            ],
+            ["wget", "-nv", "-P", "build", url],
             check=True,
             capture_output=True,
             text=True,
