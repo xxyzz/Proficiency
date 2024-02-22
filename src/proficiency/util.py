@@ -39,13 +39,14 @@ def get_short_def(gloss: str, gloss_lang: str) -> str:
         "",
         gloss,
     )
-    gloss = min(re.split(";|；|,", gloss), key=len)
+    gloss = min(re.split(";|；", gloss), key=len)
+    gloss = re.split(r",|，", gloss, 1)[0]
     gloss = min(gloss.split("/"), key=len)
     if gloss_lang == "zh":
         gloss = min(gloss.split("、"), key=len)
     if gloss_lang == "es" and "|" in gloss:
         gloss = gloss.split("|", 1)[1]
-    return gloss.strip()
+    return remove_full_stop(gloss.strip())
 
 
 def load_difficulty_data(lemma_lang: str) -> dict[str, int]:
