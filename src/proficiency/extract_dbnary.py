@@ -1,7 +1,5 @@
-import json
 import sqlite3
 import subprocess
-from importlib.resources import files
 from pathlib import Path
 from shutil import which
 
@@ -17,19 +15,16 @@ from .util import (
 
 
 def download_dbnary_files(gloss_lang: str) -> None:
-    with (files("proficiency") / "data" / "dbnary_languages.json").open(
-        encoding="utf-8"
-    ) as f:
-        dbnary_languages = json.load(f)
+    from .languages import DBNARY_LANGS
 
     base_url = "https://kaiko.getalp.org/static/ontolex/latest"
     lang_key = gloss_lang
     if gloss_lang == "hr":
         gloss_lang = "sh"
     download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_ontolex.ttl.bz2")
-    if dbnary_languages[lang_key]["has_exolex"]:
+    if DBNARY_LANGS[lang_key]["has_exolex"]:
         download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_exolex_ontolex.ttl.bz2")
-    if dbnary_languages[lang_key]["has_morphology"]:
+    if DBNARY_LANGS[lang_key]["has_morphology"]:
         download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_morphology.ttl.bz2")
 
 

@@ -1,11 +1,9 @@
 import argparse
-import json
 import logging
 import subprocess
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from importlib.metadata import version
-from importlib.resources import files
 from pathlib import Path
 from shutil import which
 
@@ -16,12 +14,11 @@ from .extract_dbnary import (
     download_dbnary_files,
     init_oxigraph_store,
 )
-from .extract_kaikki import create_lemmas_db_from_kaikki, download_kaikki_non_en_json
+from .extract_kaikki import create_lemmas_db_from_kaikki, download_kaikki_json
 from .extract_kindle_lemmas import create_kindle_lemmas_db
 
 VERSION = version("proficiency")
 MAJOR_VERSION = VERSION.split(".")[0]
-WIKITEXTRACT_LANGUAGES = frozenset(["en", "zh", "fr"])
 
 
 def compress(file_path: Path) -> None:
@@ -88,37 +85,30 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
 
 
 def main() -> None:
+    from .languages import DBNARY_LANGS, KAIKKI_GLOSS_LANGS, KAIKKI_LEMMA_LANGS
+
     logging.basicConfig(
         format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
     )
-    with (files("proficiency") / "data" / "kaikki_languages.json").open(
-        encoding="utf-8"
-    ) as f:
-        kaikki_languages = json.load(f)
-    with (files("proficiency") / "data" / "dbnary_languages.json").open(
-        encoding="utf-8"
-    ) as f:
-        dbnary_languages = json.load(f)
-    gloss_languages = kaikki_languages.keys() & dbnary_languages.keys()
-
+    gloss_languages = KAIKKI_GLOSS_LANGS | DBNARY_LANGS.keys()
     parser = argparse.ArgumentParser()
     parser.add_argument("gloss_lang", choices=gloss_languages)
     parser.add_argument(
         "--lemma-lang-codes",
         nargs="*",
-        default=kaikki_languages.keys(),
-        choices=kaikki_languages.keys(),
+        default=KAIKKI_LEMMA_LANGS,
+        choices=KAIKKI_LEMMA_LANGS,
     )
     args = parser.parse_args()
-    if args.gloss_lang not in WIKITEXTRACT_LANGUAGES:
+    if args.gloss_lang not in KAIKKI_GLOSS_LANGS:
         available_lemma_languages: set[str] = set()
-        if dbnary_languages[args.gloss_lang]["has_exolex"]:
-            if "lemma_languages" in dbnary_languages[args.gloss_lang]:
-                available_lemma_languages = set(
-                    dbnary_languages[args.gloss_lang]["lemma_languages"]
-                )
+        if DBNARY_LANGS[args.gloss_lang]["has_exolex"]:
+            if "lemma_languages" in DBNARY_LANGS[args.gloss_lang]:
+                available_lemma_languages = DBNARY_LANGS[args.gloss_lang][
+                    "lemma_languages"
+                ]
             else:
-                available_lemma_languages = set(kaikki_languages.keys())
+                available_lemma_languages = KAIKKI_GLOSS_LANGS
         else:
             available_lemma_languages = {args.gloss_lang}
         lemma_languages = set(args.lemma_lang_codes) & available_lemma_languages
@@ -132,9 +122,8 @@ def main() -> None:
 
     with ProcessPoolExecutor() as executor:
         logging.info("Creating Wiktionary files")
-        if args.gloss_lang in WIKITEXTRACT_LANGUAGES:
-            if args.gloss_lang != "en":
-                download_kaikki_non_en_json(args.gloss_lang)
+        if args.gloss_lang in KAIKKI_GLOSS_LANGS:
+            download_kaikki_json(args.gloss_lang)
             for _ in executor.map(
                 partial(
                     create_wiktionary_files_from_kaikki, gloss_lang=args.gloss_lang

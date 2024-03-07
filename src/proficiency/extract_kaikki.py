@@ -2,7 +2,6 @@ import json
 import re
 import sqlite3
 import subprocess
-from importlib.resources import files
 from pathlib import Path
 from shutil import which
 from typing import Any
@@ -34,35 +33,16 @@ SPANISH_INFLECTED_GLOSS = (
 USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
 
 
-def download_kaikki_json(lang: str) -> Path:
-    with (files("proficiency") / "data" / "kaikki_languages.json").open(
-        encoding="utf-8"
-    ) as f:
-        kaikki_languages = json.load(f)
+def download_kaikki_json(gloss_lang: str) -> Path:
+    from .split_jsonl import split_kaikki_jsonl
 
-    filename_lang = re.sub(r"[\s-]", "", kaikki_languages[lang])
-    filename = f"kaikki.org-dictionary-{filename_lang}.json"
-    filepath = Path(f"build/{lang}/{filename}")
-    if not filepath.exists():
-        subprocess.run(
-            [
-                "wget",
-                "-nv",
-                "-P",
-                f"build/{lang}",
-                f"https://kaikki.org/dictionary/{kaikki_languages[lang]}/{filename}",
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    return filepath
+    url = "https://kaikki.org/"
+    if gloss_lang == "en":
+        url += "dictionary/"
+    else:
+        url += f"{gloss_lang}wiktionary/"
+    url += "raw-wiktextract-data.json.gz"
 
-
-def download_kaikki_non_en_json(gloss_lang: str) -> Path:
-    from .split_jsonl import split_kaikki_non_en_jsonl
-
-    url = f"https://kaikki.org/{gloss_lang}wiktionary/raw-wiktextract-data.json.gz"
     gz_path = Path(f"build/{url.rsplit('/', 1)[1]}")
     jsonl_path = gz_path.with_suffix("")
     if not gz_path.exists() and not jsonl_path.exists():
@@ -90,18 +70,15 @@ def download_kaikki_non_en_json(gloss_lang: str) -> Path:
                 capture_output=True,
                 text=True,
             )
-        split_kaikki_non_en_jsonl(jsonl_path, gloss_lang)
+        split_kaikki_jsonl(jsonl_path, gloss_lang)
 
     return jsonl_path
 
 
 def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
-    if gloss_lang == "en":
-        kaikki_json_path = download_kaikki_json(lemma_lang)
-    else:
-        if lemma_lang == "hr":
-            lemma_lang = "sh"
-        kaikki_json_path = Path(f"build/{lemma_lang}/{lemma_lang}_{gloss_lang}.jsonl")
+    if lemma_lang == "hr":
+        lemma_lang = "sh"
+    kaikki_json_path = Path(f"build/{lemma_lang}/{lemma_lang}_{gloss_lang}.jsonl")
 
     difficulty_data = load_difficulty_data(lemma_lang)
     return kaikki_json_path, difficulty_data
