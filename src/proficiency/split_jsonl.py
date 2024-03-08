@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from typing import BinaryIO
 
@@ -9,6 +10,7 @@ def split_kaikki_jsonl(jsonl_f: BinaryIO, gloss_code: str) -> None:
     """
     from .languages import KAIKKI_LEMMA_LANGS
 
+    logging.info("Start splitting JSONL file")
     lemma_codes = KAIKKI_LEMMA_LANGS
     lemma_codes.remove("hr")  # Croatian
     # Wiktionary still uses the deprecated language code
@@ -37,3 +39,4 @@ def split_kaikki_jsonl(jsonl_f: BinaryIO, gloss_code: str) -> None:
 
     for out_f in out_files.values():
         out_f.close()
+    logging.info("Split JSONL file completed")

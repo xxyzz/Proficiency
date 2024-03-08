@@ -44,15 +44,14 @@ def download_kaikki_json(gloss_lang: str) -> None:
     url += "raw-wiktextract-data.json.gz"
 
     gz_path = Path(f"build/{url.rsplit('/', 1)[1]}")
-    jsonl_path = gz_path.with_suffix("")
-    if not gz_path.exists() and not jsonl_path.exists():
+    if not gz_path.exists():
         subprocess.run(
             ["wget", "-nv", "-P", "build", url],
             check=True,
             capture_output=True,
             text=True,
         )
-    if gz_path.exists() and not jsonl_path.exists():
+    if gz_path.exists():
         if which("pigz") is None and which("gzip") is None:
             import gzip
 
@@ -69,6 +68,7 @@ def download_kaikki_json(gloss_lang: str) -> None:
                 stdout=subprocess.PIPE,
             )
             split_kaikki_jsonl(sub_p.stdout, gloss_lang)  # type: ignore
+        gz_path.unlink()
 
 
 def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
@@ -206,6 +206,7 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
     create_indexes_then_close(conn)
     if gloss_lang == "zh":
         create_indexes_then_close(zh_cn_conn)
+    kaikki_json_path.unlink()
     return [db_path, zh_cn_db_path] if gloss_lang == "zh" else [db_path]
 
 
