@@ -10,6 +10,7 @@ KAIKKI_LEMMA_LANGS = {
     "es",  # Spanish
     "fi",  # Finnish
     "fr",  # French
+    "he",  # Hebrew
     "hr",  # Serbo-Croatian
     "it",  # Italian
     "ja",  # Japanese
