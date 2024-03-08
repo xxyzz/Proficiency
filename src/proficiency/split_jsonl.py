@@ -1,8 +1,9 @@
 import json
 from pathlib import Path
+from typing import BinaryIO
 
 
-def split_kaikki_jsonl(jsonl_path: Path, gloss_code: str) -> None:
+def split_kaikki_jsonl(jsonl_f: BinaryIO, gloss_code: str) -> None:
     """
     Split extracted jsonl file created by wiktextract to each language file.
     """
@@ -24,16 +25,15 @@ def split_kaikki_jsonl(jsonl_path: Path, gloss_code: str) -> None:
         for lemma_code, out_file_path in zip(lemma_codes, out_file_paths.values())
     }
 
-    with jsonl_path.open(encoding="utf-8") as jsonl_f:
-        for line in jsonl_f:
-            data = json.loads(line)
-            if "lang_code" in data:
-                lang_code = data["lang_code"]
-                if lang_code in lemma_codes:
-                    out_files[lang_code].write(line)
-                elif lang_code == "mul":
-                    for out_f in out_files.values():
-                        out_f.write(line)
+    for line in jsonl_f:
+        data = json.loads(line)
+        if "lang_code" in data:
+            lang_code = data["lang_code"]
+            if lang_code in lemma_codes:
+                out_files[lang_code].write(line.decode("utf-8"))
+            elif lang_code == "mul":
+                for out_f in out_files.values():
+                    out_f.write(line.decode("utf-8"))
 
     for out_f in out_files.values():
         out_f.close()

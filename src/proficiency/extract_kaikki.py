@@ -33,7 +33,7 @@ SPANISH_INFLECTED_GLOSS = (
 USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
 
 
-def download_kaikki_json(gloss_lang: str) -> Path:
+def download_kaikki_json(gloss_lang: str) -> None:
     from .split_jsonl import split_kaikki_jsonl
 
     url = "https://kaikki.org/"
@@ -55,24 +55,20 @@ def download_kaikki_json(gloss_lang: str) -> Path:
     if gz_path.exists() and not jsonl_path.exists():
         if which("pigz") is None and which("gzip") is None:
             import gzip
-            import shutil
 
-            with gzip.open(gz_path, "rb") as f_in, open(jsonl_path, "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
+            with gzip.open(gz_path, "rb") as f:
+                split_kaikki_jsonl(f, gloss_lang)  # type: ignore
         else:
-            subprocess.run(
+            sub_p = subprocess.Popen(
                 [
                     "pigz" if which("pigz") is not None else "gzip",
                     "-d",
+                    "-c",
                     str(gz_path),
                 ],
-                check=True,
-                capture_output=True,
-                text=True,
+                stdout=subprocess.PIPE,
             )
-        split_kaikki_jsonl(jsonl_path, gloss_lang)
-
-    return jsonl_path
+            split_kaikki_jsonl(sub_p.stdout, gloss_lang)  # type: ignore
 
 
 def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
