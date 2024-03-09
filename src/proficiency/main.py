@@ -1,5 +1,6 @@
 import argparse
 import logging
+import multiprocessing
 import subprocess
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
@@ -120,7 +121,9 @@ def main() -> None:
             raise ValueError
         args.lemma_lang_codes = list(lemma_languages)
 
-    with ProcessPoolExecutor() as executor:
+    with ProcessPoolExecutor(
+        mp_context=multiprocessing.get_context("spawn")
+    ) as executor:
         logging.info("Creating Wiktionary files")
         if args.gloss_lang in KAIKKI_GLOSS_LANGS:
             download_kaikki_json(args.gloss_lang)
