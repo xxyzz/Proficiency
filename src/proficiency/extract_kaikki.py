@@ -56,7 +56,7 @@ def download_kaikki_json(gloss_lang: str) -> None:
             import gzip
 
             with gzip.open(gz_path, "rb") as f:
-                split_kaikki_jsonl(f, gloss_lang)  # type: ignore
+                split_kaikki_jsonl(f, gloss_lang)
         else:
             sub_p = subprocess.Popen(
                 [
@@ -67,7 +67,10 @@ def download_kaikki_json(gloss_lang: str) -> None:
                 ],
                 stdout=subprocess.PIPE,
             )
-            split_kaikki_jsonl(sub_p.stdout, gloss_lang)  # type: ignore
+            if sub_p.stdout is not None:
+                with sub_p.stdout as f:
+                    split_kaikki_jsonl(f, gloss_lang)
+            sub_p.wait()
         gz_path.unlink()
 
 
