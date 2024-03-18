@@ -354,6 +354,19 @@ def get_forms(
         if form and form != word and len(form) >= len_limit:
             forms.add(form)
 
+    if lemma_lang == "cs":
+        if (
+            pos in ["adj", "verb", "adv"]
+            and not word.startswith("ne")
+            and " " not in word
+        ):
+            # Negative form: https://en.wikipedia.org/wiki/Czech_language#Grammar
+            forms |= {f"ne{form}" for form in forms}
+        if pos == "adj":
+            # Wiktionary doesn't have the dual instrumental form in declension tables
+            # https://linguistics.stackexchange.com/questions/48502/what-is-the-behind-the-declension-obrovskýma-in-the-phrase-obrovskýma-očima/48507#48507
+            forms |= {form[:-3] + "ýma" for form in forms if form.endswith("ými")}
+
     if lemma_lang in ["ru", "uk"]:  # Russian, Ukrainian
         forms |= {remove_accents(form) for form in forms}
     return forms
