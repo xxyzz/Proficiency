@@ -2,11 +2,14 @@ import json
 import re
 import sqlite3
 import subprocess
+from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 from shutil import which
 from typing import Any
 
 from .database import create_indexes_then_close, init_db, wiktionary_db_path
+from .languages import KAIKKI_TRANSLATED_GLOSS_LANGS
 from .util import (
     freq_to_difficulty,
     get_short_def,
@@ -31,6 +34,14 @@ SPANISH_INFLECTED_GLOSS = (
     r"(?:first|second|third)-person|only used in|gerund combined with"
 )
 USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
+
+
+@dataclass
+class Sense:
+    enabled: bool = False
+    short_gloss: str = ""
+    gloss: str = ""
+    example: str = ""
 
 
 def download_kaikki_json(gloss_lang: str) -> None:
@@ -138,58 +149,12 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 if simplified_form != word:
                     forms.add(simplified_form)
 
-            sense_data = []
-            zh_cn_sense_data = []
-
-            for sense in data.get("senses", []):
-                examples = sense.get("examples", [])
-                glosses = sense.get("glosses")
-                example_sent = None
-                if not glosses or is_form_entry(gloss_lang, sense):
-                    continue
-                gloss = glosses[1] if len(glosses) > 1 else glosses[0]
-                if (
-                    lemma_lang == "es"
-                    and gloss_lang == "en"
-                    and re.match(SPANISH_INFLECTED_GLOSS, gloss)
-                ):
-                    continue
-                tags = set(sense.get("tags", []))
-                if tags.intersection(FILTER_TAGS):
-                    continue
-
-                for example_data in examples:
-                    # Use the first example
-                    example_text = example_data.get("text", "")
-                    if len(example_text) > 0 and example_text != "(obsolete)":
-                        example_sent = example_text
-                        break
-                    # Chinese Wiktionary
-                    example_texts = example_data.get("texts", [])
-                    if len(example_texts) > 0:
-                        example_sent = example_texts[0]
-                        break
-
-                short_gloss = get_short_def(gloss, gloss_lang)
-                if not short_gloss:
-                    continue
-                sense_data.append((enabled, short_gloss, gloss, example_sent))
-                if gloss_lang == "zh":
-                    zh_cn_sense_data.append(
-                        (
-                            enabled,
-                            converter.convert(short_gloss),
-                            converter.convert(gloss),
-                            (
-                                converter.convert(example_sent)
-                                if example_sent is not None
-                                else None
-                            ),
-                        )
-                    )
-                enabled = False
-
-            if sense_data:
+            sense_data = (
+                get_translated_senses(gloss_lang, data, enabled)
+                if gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS
+                else get_senses(lemma_lang, gloss_lang, data, enabled)
+            )
+            if len(sense_data) > 0:
                 ipas = get_ipas(lemma_lang, data.get("sounds", []))
                 lemma_id = insert_lemma(
                     word,
@@ -202,9 +167,16 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 insert_senses(conn, sense_data, lemma_id, pos, difficulty)
                 if gloss_lang == "zh":
                     insert_forms(zh_cn_conn, forms, pos, lemma_id)
-                    insert_senses(
-                        zh_cn_conn, zh_cn_sense_data, lemma_id, pos, difficulty
-                    )
+                    zh_cn_senses = [
+                        Sense(
+                            enabled=sense.enabled,
+                            short_gloss=converter.convert(sense.short_gloss),
+                            gloss=converter.convert(sense.gloss),
+                            example=converter.convert(sense.example),
+                        )
+                        for sense in sense_data
+                    ]
+                    insert_senses(zh_cn_conn, zh_cn_senses, lemma_id, pos, difficulty)
 
     create_indexes_then_close(conn)
     if gloss_lang == "zh":
@@ -267,7 +239,11 @@ def insert_forms(
 
 
 def insert_senses(
-    conn: sqlite3.Connection, data_list: Any, lemma_id: int, pos: str, difficulty: int
+    conn: sqlite3.Connection,
+    senses: list[Sense],
+    lemma_id: int,
+    pos: str,
+    difficulty: int,
 ) -> None:
     conn.executemany(
         """
@@ -275,7 +251,18 @@ def insert_senses(
         (enabled, short_def, full_def, example, lemma_id, pos, difficulty)
         VALUES(?, ?, ?, ?, ?, ?, ?)
         """,
-        (data + (lemma_id, pos, difficulty) for data in data_list),
+        (
+            (
+                sense.enabled,
+                sense.short_gloss,
+                sense.gloss,
+                sense.example,
+                lemma_id,
+                pos,
+                difficulty,
+            )
+            for sense in senses
+        ),
     )
 
 
@@ -383,3 +370,75 @@ def is_form_entry(gloss_lang: str, sense_data: dict[str, list[str]]) -> bool:
         if gloss_lang == "fr" and category.startswith(FR_FORMS_CAT_PREFIXES):
             return True
     return False
+
+
+def get_translated_senses(
+    gloss_lang: str, word_data: dict[str, Any], enabled: bool
+) -> list[Sense]:
+    # group translated word by sense
+    translations = defaultdict(list)
+    for translation in word_data.get("translations", []):
+        if (
+            translation.get("code", translation.get("lang_code")) == gloss_lang
+            and len(translation.get("word")) > 0
+        ):
+            sense = translation.get("sense", "")
+            translations[sense].append(translation.get("word"))
+
+    return [
+        Sense(
+            enabled=index == 0 and enabled,
+            short_gloss=min(words, key=len),
+            gloss=", ".join(words),
+        )
+        for index, words in enumerate(translations.values())
+    ]
+
+
+def get_senses(
+    lemma_lang: str, gloss_lang: str, word_data: dict[str, Any], enabled: bool
+) -> list[Sense]:
+    senses = []
+    for sense in word_data.get("senses", []):
+        examples = sense.get("examples", [])
+        glosses = sense.get("glosses")
+        example_sent = ""
+        if not glosses or is_form_entry(gloss_lang, sense):
+            continue
+        gloss = glosses[1] if len(glosses) > 1 else glosses[0]
+        if (
+            lemma_lang == "es"
+            and gloss_lang == "en"
+            and re.match(SPANISH_INFLECTED_GLOSS, gloss)
+        ):
+            continue
+        tags = set(sense.get("tags", []))
+        if len(tags.intersection(FILTER_TAGS)) > 0:
+            continue
+
+        for example_data in examples:
+            # Use the first example
+            example_text = example_data.get("text", "")
+            if len(example_text) > 0 and example_text != "(obsolete)":
+                example_sent = example_text
+                break
+            # Chinese Wiktionary
+            example_texts = example_data.get("texts", [])
+            if len(example_texts) > 0:
+                example_sent = example_texts[0]
+                break
+
+        short_gloss = get_short_def(gloss, gloss_lang)
+        if len(short_gloss) == 0:
+            continue
+        senses.append(
+            Sense(
+                enabled=enabled,
+                short_gloss=short_gloss,
+                gloss=gloss,
+                example=example_sent,
+            )
+        )
+        enabled = False
+
+    return senses

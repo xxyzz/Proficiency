@@ -17,6 +17,12 @@ from .extract_dbnary import (
 )
 from .extract_kaikki import create_lemmas_db_from_kaikki, download_kaikki_json
 from .extract_kindle_lemmas import create_kindle_lemmas_db
+from .languages import (
+    DBNARY_LANGS,
+    KAIKKI_GLOSS_LANGS,
+    KAIKKI_LEMMA_LANGS,
+    KAIKKI_TRANSLATED_GLOSS_LANGS,
+)
 
 VERSION = version("proficiency")
 MAJOR_VERSION = VERSION.split(".")[0]
@@ -86,12 +92,12 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
 
 
 def main() -> None:
-    from .languages import DBNARY_LANGS, KAIKKI_GLOSS_LANGS, KAIKKI_LEMMA_LANGS
-
     logging.basicConfig(
         format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
     )
-    gloss_languages = KAIKKI_GLOSS_LANGS | DBNARY_LANGS.keys()
+    gloss_languages = (
+        KAIKKI_GLOSS_LANGS | KAIKKI_TRANSLATED_GLOSS_LANGS.keys() | DBNARY_LANGS.keys()
+    )
     parser = argparse.ArgumentParser()
     parser.add_argument("gloss_lang", choices=gloss_languages)
     parser.add_argument(
@@ -101,7 +107,7 @@ def main() -> None:
         choices=KAIKKI_LEMMA_LANGS,
     )
     args = parser.parse_args()
-    if args.gloss_lang not in KAIKKI_GLOSS_LANGS:
+    if args.gloss_lang not in KAIKKI_GLOSS_LANGS | KAIKKI_TRANSLATED_GLOSS_LANGS.keys():
         available_lemma_languages: set[str] = set()
         if DBNARY_LANGS[args.gloss_lang]["has_exolex"]:
             if "lemma_languages" in DBNARY_LANGS[args.gloss_lang]:
@@ -120,6 +126,8 @@ def main() -> None:
             )
             raise ValueError
         args.lemma_lang_codes = list(lemma_languages)
+    if args.gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS:
+        args.lemma_lang_codes = KAIKKI_TRANSLATED_GLOSS_LANGS[args.gloss_lang]
 
     with ProcessPoolExecutor(
         mp_context=multiprocessing.get_context("spawn")
