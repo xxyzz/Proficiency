@@ -57,6 +57,9 @@ def compress(file_path: Path) -> None:
 def create_wiktionary_files_from_kaikki(
     lemma_lang: str, gloss_lang: str = "en"
 ) -> None:
+    if gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS:
+        download_kaikki_json(lemma_lang, False)
+
     for db_path in create_lemmas_db_from_kaikki(lemma_lang, gloss_lang):
         compress(db_path)
 
@@ -133,8 +136,9 @@ def main() -> None:
         mp_context=multiprocessing.get_context("spawn")
     ) as executor:
         logging.info("Creating Wiktionary files")
-        if args.gloss_lang in KAIKKI_GLOSS_LANGS:
-            download_kaikki_json(args.gloss_lang)
+        if args.gloss_lang in KAIKKI_GLOSS_LANGS | KAIKKI_TRANSLATED_GLOSS_LANGS.keys():
+            if args.gloss_lang in KAIKKI_GLOSS_LANGS:
+                download_kaikki_json(args.gloss_lang)
             for _ in executor.map(
                 partial(
                     create_wiktionary_files_from_kaikki, gloss_lang=args.gloss_lang

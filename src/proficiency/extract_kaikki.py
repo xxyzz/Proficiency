@@ -5,7 +5,7 @@ import subprocess
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from shutil import which
+from shutil import copyfileobj, which
 from typing import Any
 
 from .database import create_indexes_then_close, init_db, wiktionary_db_path
@@ -44,7 +44,7 @@ class Sense:
     example: str = ""
 
 
-def download_kaikki_json(gloss_lang: str) -> None:
+def download_kaikki_json(gloss_lang: str, split_files: bool = True) -> None:
     from .split_jsonl import split_kaikki_jsonl
 
     url = "https://kaikki.org/"
@@ -54,10 +54,11 @@ def download_kaikki_json(gloss_lang: str) -> None:
         url += f"{gloss_lang}wiktionary/"
     url += "raw-wiktextract-data.json.gz"
 
-    gz_path = Path(f"build/{url.rsplit('/', 1)[1]}")
+    gz_path = Path(f"build/{gloss_lang}.json.gz")
     if not gz_path.exists():
+        gz_path.parent.mkdir(exist_ok=True)
         subprocess.run(
-            ["wget", "-nv", "-P", "build", url],
+            ["wget", "-nv", "-O", str(gz_path), url],
             check=True,
             capture_output=True,
             text=True,
@@ -66,29 +67,34 @@ def download_kaikki_json(gloss_lang: str) -> None:
         if which("pigz") is None and which("gzip") is None:
             import gzip
 
-            with gzip.open(gz_path, "rb") as f:
-                split_kaikki_jsonl(f, gloss_lang)
+            with gzip.open(gz_path, "rb") as gz_f:
+                if split_files:
+                    split_kaikki_jsonl(gz_f, gloss_lang)
+                else:
+                    with open(gz_path.with_suffix(".json"), "w", encoding="utf-8") as f:
+                        copyfileobj(gz_f, f)  # type: ignore
         else:
-            sub_p = subprocess.Popen(
-                [
-                    "pigz" if which("pigz") is not None else "gzip",
-                    "-d",
-                    "-c",
-                    str(gz_path),
-                ],
-                stdout=subprocess.PIPE,
-            )
-            if sub_p.stdout is not None:
-                with sub_p.stdout as f:
-                    split_kaikki_jsonl(f, gloss_lang)
-            sub_p.wait()
-        gz_path.unlink()
+            command_args = ["pigz" if which("pigz") is not None else "gzip", "-d"]
+            if split_files:
+                command_args.append("-c")
+            command_args.append(str(gz_path))
+            if split_files:
+                sub_p = subprocess.Popen(command_args, stdout=subprocess.PIPE)
+                if sub_p.stdout is not None:
+                    with sub_p.stdout as f:
+                        split_kaikki_jsonl(f, gloss_lang)
+                sub_p.wait()
+                gz_path.unlink()
+            else:
+                subprocess.run(command_args, check=True, text=True)
 
 
 def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
     if lemma_lang == "hr":
         lemma_lang = "sh"
     kaikki_json_path = Path(f"build/{lemma_lang}/{lemma_lang}_{gloss_lang}.jsonl")
+    if gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS:
+        kaikki_json_path = Path(f"build/{lemma_lang}.json")
 
     difficulty_data = load_difficulty_data(lemma_lang)
     return kaikki_json_path, difficulty_data
@@ -122,6 +128,10 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 or len(word) < len_limit
                 or re.match(r"\W|\d", word)
                 or is_form_entry(gloss_lang, data)
+                or (
+                    gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS
+                    and len(data.get("translations", [])) == 0
+                )
             ):
                 continue
 
@@ -380,7 +390,7 @@ def get_translated_senses(
     for translation in word_data.get("translations", []):
         if (
             translation.get("code", translation.get("lang_code")) == gloss_lang
-            and len(translation.get("word")) > 0
+            and len(translation.get("word", "")) > 0
         ):
             sense = translation.get("sense", "")
             translations[sense].append(translation.get("word"))
