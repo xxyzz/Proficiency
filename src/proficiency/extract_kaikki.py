@@ -387,13 +387,18 @@ def get_translated_senses(
 ) -> list[Sense]:
     # group translated word by sense
     translations = defaultdict(list)
+    words = set()
     for translation in word_data.get("translations", []):
         if (
             translation.get("code", translation.get("lang_code")) == gloss_lang
             and len(translation.get("word", "")) > 0
         ):
+            word = translation.get("word")
+            if word in words:
+                continue
+            words.add(word)
             sense = translation.get("sense", "")
-            translations[sense].append(translation.get("word"))
+            translations[sense].append(word)
 
     return [
         Sense(
