@@ -112,6 +112,10 @@ def create_klld_db(
     ) in wiktionary_conn.execute(
         "SELECT id, lemma_id, pos, short_def, full_def, example FROM senses"
     ):
+        if gloss_lang == "he":
+            short_def = remove_rtl_pdi(short_def)
+            full_def = remove_rtl_pdi(full_def)
+
         klld_conn.execute(
             """
 INSERT INTO senses (id, display_lemma_id, term_id, term_lemma_id, pos_type, source_id,
@@ -148,3 +152,8 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     klld_conn.commit()
     klld_conn.close()
     wiktionary_conn.close()
+
+
+def remove_rtl_pdi(text: str) -> str:
+    # https://en.wikipedia.org/wiki/Bidirectional_text
+    return text.replace("\u2067", "").replace("\u2069", "")
