@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Proficiency"
-version = "0.5.16"
+version = "0.5.17"
 authors = [{ name = "xxyzz" }]
 description = "Create language files for WordDumb."
 readme = "README.md"
@@ -25,9 +25,6 @@ dev = ["mypy", "ruff"]
 
 [project.scripts]
 proficiency = "proficiency.main:main"
-
-[tool.setuptools]
-zip-safe = false
 
 [tool.mypy]
 check_untyped_defs = true

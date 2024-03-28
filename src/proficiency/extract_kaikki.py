@@ -19,7 +19,6 @@ from .util import (
 
 FILTER_TAGS = frozenset(
     {
-        "plural",
         "alternative",
         "obsolete",
         "abbreviation",
