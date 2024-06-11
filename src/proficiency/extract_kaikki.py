@@ -324,6 +324,46 @@ LEMMINFLECT_POS_TAGS = {
 }
 
 
+def czech_adjective_to_adverb(word: str) -> str | None:
+    if word.endswith("lý") or word.endswith("sý"):
+        return word[:-1] + "e"
+    elif word.endswith("rý"):
+        return word[:-2] + "ře"
+    elif word.endswith("cí"):
+        return word[:-1] + "e"
+    elif word.endswith("í"):
+        return word[:-1] + "ě"
+    elif word.endswith("chý"):
+        return word[:-3] + "še"
+    elif word.endswith("cký") or word.endswith("ský"):
+        return word[:-2] + "ky"
+    elif word.endswith("hý"):
+        return word[:-2] + "ze"
+    elif word.endswith("ký"):
+        return word[:-2] + "ce"
+    elif word.endswith("ý"):
+        return word[:-1] + "ě"
+    else:
+        return None
+
+
+def get_czech_derived_adverb_forms(adj: str) -> set[str]:
+    adverb = czech_adjective_to_adverb(adj)
+    if adverb is None:
+        return set()
+    else:
+        derived_base_forms = {adverb}
+        if not adverb.startswith("ne"):  # Negated form
+            derived_base_forms.add("ne" + adverb)
+        final_derived_forms: set[str] = set()
+        for adv in derived_base_forms:  # Comparative and superlative forms
+            if adv.endswith("ě") or adv.endswith("e"):
+                final_derived_forms.add(adv + "ji")
+                final_derived_forms.add("nej" + adv + "ji")
+        final_derived_forms |= derived_base_forms
+        return final_derived_forms
+
+
 def get_forms(
     word: str,
     lemma_lang: str,
@@ -362,6 +402,7 @@ def get_forms(
             # Wiktionary doesn't have the dual instrumental form in declension tables
             # https://linguistics.stackexchange.com/questions/48502/what-is-the-behind-the-declension-obrovskýma-in-the-phrase-obrovskýma-očima/48507#48507
             forms |= {form[:-3] + "ýma" for form in forms if form.endswith("ými")}
+            forms |= get_czech_derived_adverb_forms(word)
 
     if lemma_lang in ["ru", "uk"]:  # Russian, Ukrainian
         forms |= {remove_accents(form) for form in forms}
