@@ -51,9 +51,9 @@ def download_kaikki_json(gloss_lang: str, split_files: bool = True) -> None:
         url += "dictionary/"
     else:
         url += f"{gloss_lang}wiktionary/"
-    url += "raw-wiktextract-data.json.gz"
+    url += "raw-wiktextract-data.jsonl.gz"
 
-    gz_path = Path(f"build/{gloss_lang}.json.gz")
+    gz_path = Path(f"build/{gloss_lang}.jsonl.gz")
     if not gz_path.exists():
         gz_path.parent.mkdir(exist_ok=True)
         subprocess.run(
@@ -93,7 +93,7 @@ def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
         lemma_lang = "sh"
     kaikki_json_path = Path(f"build/{lemma_lang}/{lemma_lang}_{gloss_lang}.jsonl")
     if gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS:
-        kaikki_json_path = Path(f"build/{lemma_lang}.json")
+        kaikki_json_path = Path(f"build/{lemma_lang}.jsonl")
 
     difficulty_data = load_difficulty_data(lemma_lang)
     return kaikki_json_path, difficulty_data
