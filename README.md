@@ -4,7 +4,7 @@ Language files for [WordDumb](https://github.com/xxyzz/WordDumb).
 
 ## Data source
 
-Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about-dbnary), Chinese  and French Wiktionary data are created with the [Wiktextract](https://github.com/tatuylonen/wiktextract) tool. Word difficulty data sources are listed in each language subfolders.
+Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about-dbnary). Word difficulty data sources are listed in each language subfolders.
 
 ## Dependencies
 
