@@ -29,7 +29,7 @@ KAIKKI_LEMMA_LANGS = {
     "zh",  # Chinese
 }
 
-KAIKKI_GLOSS_LANGS = {"en", "fr", "zh"}
+KAIKKI_GLOSS_LANGS = {"en", "fr", "zh", "ru", "de", "es"}
 
 # key is translated word language code, value is source Wiktionary edition codes
 KAIKKI_TRANSLATED_GLOSS_LANGS: dict[str, list[str]] = {
