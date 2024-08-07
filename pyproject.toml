@@ -16,8 +16,6 @@ dependencies = [
     "wordfreq[mecab]",
     "wiktextract-lemmatization @ git+https://github.com/Vuizur/wiktextract-lemmatization@37f438eb973364de4d5e70959ee1c2aa26bf5ba5",
     "pyoxigraph",
-    # mecab with prerelease version for 3.12 wheels
-    "mecab-python3>=1.0.9.dev4 ; platform_system == 'Windows'",
 ]
 
 [project.optional-dependencies]

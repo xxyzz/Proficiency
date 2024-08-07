@@ -28,10 +28,7 @@ jobs:
           cache: 'pip'
 
       - name: Install package
-        run: |
-          # remove mecab once "mecab-python3" releases 3.12 wheels
-          sudo apt install -y mecab libmecab-dev
-          python -m pip install .
+        run: python -m pip install .
 
       - name: Run tests
         run: python -m unittest discover -b -s tests
