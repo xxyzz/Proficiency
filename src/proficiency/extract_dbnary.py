@@ -64,14 +64,6 @@ def download_dbnary_file(url: str) -> None:
             text=True,
             capture_output=True,
         )
-        if ttl_path.name == "es_dbnary_ontolex.ttl":
-            # Fix parse subtag error
-            subprocess.run(
-                ["perl", "-C", "-pi", "-e", "s/es-.+-ipa/es-fonipa/g", str(ttl_path)],
-                check=True,
-                text=True,
-                capture_output=True,
-            )
 
 
 def insert_lemmas(
