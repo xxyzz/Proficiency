@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["mypy", "ruff", "requests"]
+dev = ["mypy", "ruff", "requests", "types-requests"]
 
 [project.scripts]
 proficiency = "proficiency.main:main"

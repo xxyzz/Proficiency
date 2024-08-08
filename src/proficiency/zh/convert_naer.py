@@ -4,20 +4,18 @@ import json
 import re
 
 
-def convert_difficulty(level: str) -> int:
-    match level:
-        case "第P1級" | "第1級" | "第1+級" | "第2級" | "第2+級" | "第3級" | "第3+級":
+def convert_difficulty(level_str: str) -> int:
+    match int(level_str[1]):
+        case 1 | 2 | 3:
             return 5
-        case "第4級":
+        case 4:
             return 4
-        case "第5級":
+        case 5:
             return 3
-        case "第6級":
+        case 6:
             return 2
-        case "第7級":
-            return 1
         case _:
-            return -1
+            return 1
 
 
 def main() -> None:
@@ -55,7 +53,7 @@ def main() -> None:
                 words[word] = difficulty
 
     with open("difficulty.json", "w") as f:
-        json.dump(words, f, indent=2, ensure_ascii=False)
+        json.dump(words, f, indent=2, ensure_ascii=False, sort_keys=True)
 
 
 if __name__ == "__main__":
