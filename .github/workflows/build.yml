@@ -51,7 +51,7 @@ jobs:
 
       - name: Install package
         run: |
-          sudo apt install -y lbzip2 mecab libmecab-dev
+          sudo apt install -y lbzip2
           python -m pip install .
 
       - name: Create files
