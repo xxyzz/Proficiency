@@ -18,7 +18,7 @@ KAIKKI_LEMMA_LANGS = {
     "lt",  # Lithuanian
     "mk",  # Macedonian
     "nl",  # Dutch
-    "no",  # Norwegian Bokmål
+    "nb",  # Norwegian Bokmål
     "pl",  # Polish
     "pt",  # Portuguese
     "ro",  # Romanian
@@ -67,7 +67,7 @@ DBNARY_LANGS: dict[str, Any] = {
     "lt": {"has_exolex": False, "has_morphology": False},
     "mg": {"has_exolex": True, "has_morphology": False},
     "nl": {"has_exolex": False, "has_morphology": False},
-    "no": {"has_exolex": False, "has_morphology": False},
+    "nb": {"has_exolex": False, "has_morphology": False},
     "pl": {"has_exolex": False, "has_morphology": False},
     "pt": {"has_exolex": False, "has_morphology": False},
     "ru": {"has_exolex": False, "has_morphology": False},

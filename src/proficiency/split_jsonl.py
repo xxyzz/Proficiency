@@ -19,9 +19,6 @@ def split_kaikki_jsonl(
         gloss_code = lemma_code
     else:
         lemma_codes = KAIKKI_LEMMA_LANGS
-        lemma_codes.remove("hr")  # Croatian
-        # Wiktionary still uses the deprecated language code
-        lemma_codes.add("sh")
 
     out_file_paths = {
         l_code: Path(f"build/{l_code}/{l_code}_{gloss_code}.jsonl")
@@ -43,7 +40,19 @@ def split_kaikki_jsonl(
             elif lang_code == "mul":
                 for out_f in out_files.values():
                     out_f.write(line.decode("utf-8"))
+            else:
+                new_lang_code = convert_lang_code(lang_code)
+                if new_lang_code in lemma_codes:
+                    out_files[new_lang_code].write(line.decode("utf-8"))
 
     for out_f in out_files.values():
         out_f.close()
     logging.info("Split JSONL file completed")
+
+
+def convert_lang_code(code: str) -> str:
+    codes = {
+        "sh": "hr",  # Serbo-Croatian -> Croatian
+        "no": "nb",  # Norwegian -> Norwegian Bokmål
+    }
+    return codes.get(code, "")

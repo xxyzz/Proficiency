@@ -19,8 +19,7 @@ def download_dbnary_files(gloss_lang: str) -> None:
 
     base_url = "https://kaiko.getalp.org/static/ontolex/latest"
     lang_key = gloss_lang
-    if gloss_lang == "hr":
-        gloss_lang = "sh"
+    gloss_lang = convert_lang_code(gloss_lang)
     download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_ontolex.ttl.bz2")
     if DBNARY_LANGS[lang_key]["has_exolex"]:
         download_dbnary_file(f"{base_url}/{gloss_lang}_dbnary_exolex_ontolex.ttl.bz2")
@@ -237,8 +236,7 @@ def insert_senses(
 
 
 def init_oxigraph_store(gloss_lang: str) -> tuple[Store, bool]:
-    if gloss_lang == "hr":
-        gloss_lang = "sh"
+    gloss_lang = convert_lang_code(gloss_lang)
     store = Store(f"build/ttl/{gloss_lang}_store")
     store.bulk_load(f"build/ttl/{gloss_lang}_dbnary_ontolex.ttl", "text/turtle")
     exolex_path = Path(f"build/ttl/{gloss_lang}_dbnary_exolex_ontolex.ttl")
@@ -256,11 +254,9 @@ def create_lemmas_db_from_dbnary(
     store: Store, lemma_lang: str, gloss_lang: str, has_morphology: bool
 ) -> list[Path]:
     db_path = wiktionary_db_path(lemma_lang, gloss_lang)
-    if lemma_lang == "hr":
-        lemma_lang = "sh"
-    if gloss_lang == "hr":
-        gloss_lang = "sh"
     conn = init_db(db_path, lemma_lang, False, False)
+    lemma_lang = convert_lang_code(lemma_lang)
+    gloss_lang = convert_lang_code(gloss_lang)
     lemma_ids = insert_lemmas(store, conn, lemma_lang)
     if has_morphology and lemma_lang == gloss_lang:
         insert_forms(store, conn, lemma_lang, lemma_ids)
@@ -282,6 +278,14 @@ def dbnary_to_kaikki_pos(pos: str) -> str:
             return "verb"
         case _:
             return "other"
+
+
+def convert_lang_code(code: str) -> str:
+    if code == "hr":  # Croatian
+        return "sh"  # Serbo-Croatian, MediaWiki old code
+    elif code == "nb":  # Norwegian Bokmål
+        return "no"  # Norwegian, MediaWiki old code
+    return code
 
 
 if __name__ == "__main__":

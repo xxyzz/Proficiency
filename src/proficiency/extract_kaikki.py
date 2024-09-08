@@ -82,8 +82,6 @@ def download_kaikki_json(lemma_lang: str, gloss_lang: str) -> None:
 
 
 def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
-    if lemma_lang == "hr":
-        lemma_lang = "sh"
     kaikki_json_path = Path(f"build/{lemma_lang}/{lemma_lang}_{gloss_lang}.jsonl")
     if gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS:
         kaikki_json_path = Path(f"build/{lemma_lang}/{lemma_lang}_{lemma_lang}.jsonl")
