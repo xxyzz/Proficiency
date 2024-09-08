@@ -53,11 +53,14 @@ def init_db(
     return conn
 
 
-def create_indexes_then_close(conn: sqlite3.Connection) -> None:
+def create_indexes_then_close(conn: sqlite3.Connection, lemma_lang: str) -> None:
     create_indexes_sql = """
     CREATE INDEX idx_lemmas ON lemmas (lemma);
     CREATE INDEX idx_senses ON senses (lemma_id, pos);
     """
     conn.executescript(create_indexes_sql)
+    if lemma_lang != "":
+        for (lemma_num,) in conn.execute("SELECT count(*) FROM lemmas"):
+            print(f"{lemma_lang}: {lemma_num}")
     conn.commit()
     conn.close()

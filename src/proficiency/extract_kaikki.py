@@ -180,9 +180,9 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                     ]
                     insert_senses(zh_cn_conn, zh_cn_senses, lemma_id, pos, difficulty)
 
-    create_indexes_then_close(conn)
+    create_indexes_then_close(conn, lemma_lang)
     if gloss_lang == "zh":
-        create_indexes_then_close(zh_cn_conn)
+        create_indexes_then_close(zh_cn_conn, "")
     kaikki_json_path.unlink()
     return [db_path, zh_cn_db_path] if gloss_lang == "zh" else [db_path]
 

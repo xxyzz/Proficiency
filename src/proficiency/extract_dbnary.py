@@ -265,7 +265,7 @@ def create_lemmas_db_from_dbnary(
     if has_morphology and lemma_lang == gloss_lang:
         insert_forms(store, conn, lemma_lang, lemma_ids)
     insert_senses(store, conn, lemma_lang, gloss_lang, lemma_ids)
-    create_indexes_then_close(conn)
+    create_indexes_then_close(conn, lemma_lang)
     return [db_path]
 
 

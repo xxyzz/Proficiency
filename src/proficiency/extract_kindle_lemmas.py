@@ -87,7 +87,7 @@ def create_kindle_lemmas_db(db_path: Path) -> None:
             en_data = (sense_id, enabled, pos_type, difficulty)
             insert_en_data(conn, lemma, en_data, lemminflect_pos, lemma_ids)
 
-    create_indexes_then_close(conn)
+    create_indexes_then_close(conn, "")
 
 
 def insert_lemma(
