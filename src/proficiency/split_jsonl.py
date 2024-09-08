@@ -54,5 +54,6 @@ def convert_lang_code(code: str) -> str:
     codes = {
         "sh": "hr",  # Serbo-Croatian -> Croatian
         "no": "nb",  # Norwegian -> Norwegian Bokmål
+        "cmn": "zh",  # used in Russian Wiktionary for Mandarin Chinese
     }
     return codes.get(code, "")
