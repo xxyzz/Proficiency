@@ -1,12 +1,13 @@
 import argparse
 import logging
 import multiprocessing
-import subprocess
+import re
+import tarfile
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from importlib.metadata import version
 from pathlib import Path
-from shutil import which
 
 from .create_klld import create_klld_db
 from .database import wiktionary_db_path
@@ -28,59 +29,34 @@ VERSION = version("proficiency")
 MAJOR_VERSION = VERSION.split(".")[0]
 
 
-def compress(file_path: Path) -> None:
-    compressed_path = file_path.with_suffix(file_path.suffix + ".bz2")
-    compressed_path.unlink(missing_ok=True)
-
-    if which("lbzip2") is None and which("bzip2") is None:
-        import bz2
-
-        # Use pure python implementation of bzip2 compression
-        with open(file_path, "rb") as input_file:
-            data = input_file.read()
-            compressed_data = bz2.compress(data)
-            with open(compressed_path, "wb") as output_file:
-                output_file.write(compressed_data)
-    else:
-        subprocess.run(
-            [
-                "lbzip2" if which("lbzip2") is not None else "bzip2",
-                "-k",
-                str(file_path),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-
 def create_wiktionary_files_from_kaikki(
     lemma_lang: str, gloss_lang: str = "en"
-) -> None:
+) -> list[Path]:
     if gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS:
         download_kaikki_json(lemma_lang, gloss_lang)
 
-    for db_path in create_lemmas_db_from_kaikki(lemma_lang, gloss_lang):
-        compress(db_path)
+    return create_lemmas_db_from_kaikki(lemma_lang, gloss_lang)
 
 
 def create_wiktionary_files_from_dbnary(
     lemma_langs: list[str], gloss_lang: str
-) -> None:
+) -> list[Path]:
     download_dbnary_files(gloss_lang)
     store, has_morphology = init_oxigraph_store(gloss_lang)
+    db_paths: list[Path] = []
     for lemma_lang in lemma_langs:
-        for db_path in create_lemmas_db_from_dbnary(
-            store, lemma_lang, gloss_lang, has_morphology
-        ):
-            compress(db_path)
+        db_paths.extend(
+            create_lemmas_db_from_dbnary(store, lemma_lang, gloss_lang, has_morphology)
+        )
+    return db_paths
 
 
-def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
+def create_kindle_files(lemma_lang: str, gloss_lang: str) -> list[Path]:
+    db_paths = []
     if lemma_lang == "en" and gloss_lang == "en":
         db_path = Path(f"build/en/kindle_en_en_v{MAJOR_VERSION}.db")
         create_kindle_lemmas_db(db_path)
-        compress(db_path)
+        db_paths.append(db_path)
 
     klld_path = Path(
         f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
@@ -91,7 +67,8 @@ def create_kindle_files(lemma_lang: str, gloss_lang: str) -> None:
         lemma_lang,
         gloss_lang,
     )
-    compress(klld_path)
+    db_paths.append(klld_path)
+    return db_paths
 
 
 def main() -> None:
@@ -136,33 +113,53 @@ def main() -> None:
         mp_context=multiprocessing.get_context("spawn")
     ) as executor:
         logging.info("Creating Wiktionary files")
+        file_paths = []
         if args.gloss_lang in KAIKKI_GLOSS_LANGS | KAIKKI_TRANSLATED_GLOSS_LANGS.keys():
             if args.gloss_lang in KAIKKI_GLOSS_LANGS:
                 download_kaikki_json("", args.gloss_lang)
-            for _ in executor.map(
+            for db_paths in executor.map(
                 partial(
                     create_wiktionary_files_from_kaikki, gloss_lang=args.gloss_lang
                 ),
                 args.lemma_lang_codes,
             ):
-                pass
+                file_paths.extend(db_paths)
         else:
-            create_wiktionary_files_from_dbnary(args.lemma_lang_codes, args.gloss_lang)
+            file_paths = create_wiktionary_files_from_dbnary(
+                args.lemma_lang_codes, args.gloss_lang
+            )
         logging.info("Wiktionary files created")
 
         logging.info("Creating Kindle files")
-        for _ in executor.map(
+        no_zh_cn_paths = file_paths.copy()
+        for db_paths in executor.map(
             partial(create_kindle_files, gloss_lang=args.gloss_lang),
             args.lemma_lang_codes,
         ):
-            pass
+            no_zh_cn_paths.extend(db_paths)
+        archive_files(no_zh_cn_paths)
         if args.gloss_lang == "zh":
-            for _ in executor.map(
+            for db_paths in executor.map(
                 partial(create_kindle_files, gloss_lang="zh_cn"),
                 args.lemma_lang_codes,
             ):
-                pass
+                file_paths.extend(db_paths)
+            archive_files(file_paths)
         logging.info("Kindle files created")
+
+
+def archive_files(file_paths: list[Path]) -> None:
+    grouped_paths = defaultdict(list)
+    lemma_code = ""
+    gloss_code = ""
+    for path in file_paths:
+        _, lemma_code, gloss_code, _ = re.split(r"\.|_", path.name, 3)
+        grouped_paths[f"{lemma_code}_{gloss_code}"].append(path)
+    for tar_name, paths in grouped_paths.items():
+        tar_path = f"build/{tar_name}.tar.bz2"
+        with tarfile.open(name=tar_path, mode="x:bz2") as tar_f:
+            for path in paths:
+                tar_f.add(path, path.name)
 
 
 if __name__ == "__main__":

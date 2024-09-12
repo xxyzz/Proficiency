@@ -62,9 +62,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.gloss_lang }}_gloss
+          name: ${{ matrix.gloss_lang }}
           if-no-files-found: error
           path: |
-            **/wiktionary_*.bz2
-            **/kindle_*.bz2
-            **/kll.*.bz2
+            **/*.bz2
