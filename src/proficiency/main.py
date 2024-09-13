@@ -156,6 +156,8 @@ def archive_files(file_paths: list[Path]) -> None:
         _, lemma_code, gloss_code, _ = re.split(r"\.|_", path.name, 3)
         grouped_paths[f"{lemma_code}_{gloss_code}"].append(path)
     for tar_name, paths in grouped_paths.items():
+        if "zh_cn" in paths[-1].name:
+            tar_name += "_cn"
         tar_path = f"build/{tar_name}.tar.bz2"
         with tarfile.open(name=tar_path, mode="x:bz2") as tar_f:
             for path in paths:
