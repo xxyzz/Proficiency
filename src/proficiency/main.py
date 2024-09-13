@@ -10,7 +10,6 @@ from importlib.metadata import version
 from pathlib import Path
 
 from .create_klld import create_klld_db
-from .database import wiktionary_db_path
 from .extract_dbnary import (
     create_lemmas_db_from_dbnary,
     download_dbnary_files,
@@ -48,26 +47,6 @@ def create_wiktionary_files_from_dbnary(
         db_paths.extend(
             create_lemmas_db_from_dbnary(store, lemma_lang, gloss_lang, has_morphology)
         )
-    return db_paths
-
-
-def create_kindle_files(lemma_lang: str, gloss_lang: str) -> list[Path]:
-    db_paths = []
-    if lemma_lang == "en" and gloss_lang == "en":
-        db_path = Path(f"build/en/kindle_en_en_v{MAJOR_VERSION}.db")
-        create_kindle_lemmas_db(db_path)
-        db_paths.append(db_path)
-
-    klld_path = Path(
-        f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
-    )
-    create_klld_db(
-        wiktionary_db_path(lemma_lang, gloss_lang),
-        klld_path,
-        lemma_lang,
-        gloss_lang,
-    )
-    db_paths.append(klld_path)
     return db_paths
 
 
@@ -131,37 +110,51 @@ def main() -> None:
         logging.info("Wiktionary files created")
 
         logging.info("Creating Kindle files")
+        kindle_db_path = Path()
+        if "en" in args.lemma_lang_codes and args.gloss_lang in ["en", "zh"]:
+            kindle_db_path = Path(f"build/en/kindle_en_en_v{MAJOR_VERSION}.db")
+            create_kindle_lemmas_db(kindle_db_path)
+
         no_zh_cn_paths = file_paths.copy()
-        for db_paths in executor.map(
-            partial(create_kindle_files, gloss_lang=args.gloss_lang),
+        for db_path in executor.map(
+            partial(create_klld_db, args.gloss_lang),
             args.lemma_lang_codes,
         ):
-            no_zh_cn_paths.extend(db_paths)
-        archive_files(no_zh_cn_paths)
+            no_zh_cn_paths.append(db_path)
+        archive_files(no_zh_cn_paths, kindle_db_path)
         if args.gloss_lang == "zh":
-            for db_paths in executor.map(
-                partial(create_kindle_files, gloss_lang="zh_cn"),
+            for db_path in executor.map(
+                partial(create_klld_db, "zh_cn"),
                 args.lemma_lang_codes,
             ):
-                file_paths.extend(db_paths)
-            archive_files(file_paths)
+                file_paths.append(db_path)
+            archive_files(file_paths, kindle_db_path, True)
         logging.info("Kindle files created")
 
 
-def archive_files(file_paths: list[Path]) -> None:
+def archive_files(
+    file_paths: list[Path], kindle_db_path: Path, is_zh_cn: bool = False
+) -> None:
     grouped_paths = defaultdict(list)
     lemma_code = ""
     gloss_code = ""
     for path in file_paths:
+        if (is_zh_cn and "zh_cn" not in path.name) or (
+            not is_zh_cn and "zh_cn" in path.name
+        ):
+            continue
         _, lemma_code, gloss_code, _ = re.split(r"\.|_", path.name, 3)
-        grouped_paths[f"{lemma_code}_{gloss_code}"].append(path)
-    for tar_name, paths in grouped_paths.items():
-        if "zh_cn" in paths[-1].name:
+        tar_name = f"{lemma_code}_{gloss_code}"
+        if is_zh_cn:
             tar_name += "_cn"
-        tar_path = f"build/{tar_name}.tar.bz2"
+        grouped_paths[tar_name].append(path)
+    for tar_name, paths in grouped_paths.items():
+        tar_path = Path(f"build/{tar_name}.tar.bz2")
         with tarfile.open(name=tar_path, mode="x:bz2") as tar_f:
             for path in paths:
                 tar_f.add(path, path.name)
+            if tar_name.startswith(("en_en", "en_zh")):
+                tar_f.add(kindle_db_path, kindle_db_path.name)
 
 
 if __name__ == "__main__":

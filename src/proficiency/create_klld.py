@@ -89,14 +89,18 @@ def create_klld_tables(
     conn.executemany("INSERT INTO metadata VALUES(?, ?)", metadata.items())
 
 
-def create_klld_db(
-    wiktionary_db_path: Path, klld_path: Path, lemma_lang: str, gloss_lang: str
-) -> None:
+def create_klld_db(gloss_lang: str, lemma_lang: str) -> Path:
+    from .database import wiktionary_db_path
+    from .main import MAJOR_VERSION
+
+    klld_path = Path(
+        f"build/{lemma_lang}/kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
+    )
     if klld_path.exists():
         klld_path.unlink()
 
     klld_conn = sqlite3.connect(klld_path)
-    wiktionary_conn = sqlite3.connect(wiktionary_db_path)
+    wiktionary_conn = sqlite3.connect(wiktionary_db_path(lemma_lang, gloss_lang))
     create_klld_tables(klld_conn, lemma_lang, gloss_lang)
 
     for data in wiktionary_conn.execute("SELECT id, lemma FROM lemmas"):
@@ -152,6 +156,7 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     klld_conn.commit()
     klld_conn.close()
     wiktionary_conn.close()
+    return klld_path
 
 
 def remove_rtl_pdi(text: str) -> str:
