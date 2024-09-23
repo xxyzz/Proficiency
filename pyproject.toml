@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Proficiency"
-version = "0.5.21"
+version = "0.5.22"
 authors = [{ name = "xxyzz" }]
 description = "Create language files for WordDumb."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { text = "GNU General Public License v3 or later (GPLv3+)" }
 dependencies = [
     "lemminflect",

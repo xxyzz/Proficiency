@@ -11,12 +11,15 @@ KAIKKI_LEMMA_LANGS = {
     "fi",  # Finnish
     "fr",  # French
     "he",  # Hebrew
+    "hi",  # Hindi
     "hr",  # Serbo-Croatian
+    "id",  # Indonesian
     "it",  # Italian
     "ja",  # Japanese
     "ko",  # Korean
     "lt",  # Lithuanian
     "mk",  # Macedonian
+    "ms",  # Malay
     "nl",  # Dutch
     "nb",  # Norwegian Bokmål
     "pl",  # Polish
