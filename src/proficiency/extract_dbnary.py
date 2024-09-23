@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 from shutil import which
 
-from pyoxigraph import Store
+from pyoxigraph import RdfFormat, Store
 
 from .database import create_indexes_then_close, init_db, wiktionary_db_path
 from .util import (
@@ -238,13 +238,15 @@ def insert_senses(
 def init_oxigraph_store(gloss_lang: str) -> tuple[Store, bool]:
     gloss_lang = convert_lang_code(gloss_lang)
     store = Store(f"build/ttl/{gloss_lang}_store")
-    store.bulk_load(f"build/ttl/{gloss_lang}_dbnary_ontolex.ttl", "text/turtle")
+    store.bulk_load(
+        path=f"build/ttl/{gloss_lang}_dbnary_ontolex.ttl", format=RdfFormat.TURTLE
+    )
     exolex_path = Path(f"build/ttl/{gloss_lang}_dbnary_exolex_ontolex.ttl")
     if exolex_path.exists():
-        store.bulk_load(str(exolex_path), "text/turtle")
+        store.bulk_load(path=exolex_path, format=RdfFormat.TURTLE)
     morphology_path = Path(f"build/ttl/{gloss_lang}_dbnary_morphology.ttl")
     if morphology_path.exists():
-        store.bulk_load(str(morphology_path), "text/turtle")
+        store.bulk_load(path=morphology_path, format=RdfFormat.TURTLE)
     store.optimize()
 
     return store, morphology_path.exists()
@@ -292,7 +294,9 @@ if __name__ == "__main__":
     gloss_lang = "fr"
     store = Store()
     # store.bulk_load(f"ttl/test.ttl", "text/turtle")
-    store.bulk_load(f"build/ttl/{gloss_lang}_dbnary_ontolex.ttl", "text/turtle")
+    store.bulk_load(
+        path=f"build/ttl/{gloss_lang}_dbnary_ontolex.ttl", format=RdfFormat.TURTLE
+    )
     # store.bulk_load(f"ttl/{gloss_lang}_dbnary_morphology.ttl", "text/turtle")
     # store.bulk_load(f"ttl/{gloss_lang}_dbnary_exolex_ontolex.ttl", "text/turtle")
     store.optimize()
