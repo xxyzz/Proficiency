@@ -37,6 +37,7 @@ KAIKKI_GLOSS_LANGS = {"en", "fr", "zh", "ru", "de", "es", "ja", "pl"}
 # key is translated word language code, value is source Wiktionary edition codes
 KAIKKI_TRANSLATED_GLOSS_LANGS: dict[str, list[str]] = {
     "he": ["en"],  # English to Hebrew
+    "th": ["en"],
 }
 
 # has_exolex: has lemmas in other languages

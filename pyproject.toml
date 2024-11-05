@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Proficiency"
-version = "0.5.22"
+version = "0.5.23"
 authors = [{ name = "xxyzz" }]
 description = "Create language files for WordDumb."
 readme = "README.md"
