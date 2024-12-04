@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        gloss_lang: ['de', 'el', 'en', 'es', 'fi', 'fr', 'he', 'hr', 'it', 'ja', 'lt', 'nl', 'nb', 'pl', 'pt', 'ru', 'sv', 'th', 'zh']
+        gloss_lang: ['de', 'el', 'en', 'es', 'fi', 'fr', 'he', 'hr', 'it', 'ja', 'lt', 'nl', 'nb', 'pl', 'pt', 'ru', 'sv', 'th', 'zh', 'ko']
     steps:
       - uses: actions/checkout@v4
 
