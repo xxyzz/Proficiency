@@ -28,6 +28,7 @@ KAIKKI_LEMMA_LANGS = {
     "ru",  # Russian
     "sl",  # Slovene
     "sv",  # Swedish
+    "th",  # Thai
     "uk",  # Ukrainian
     "zh",  # Chinese
 }
@@ -45,12 +46,13 @@ KAIKKI_GLOSS_LANGS = {
     "ko",
     "pt",
     "it",
+    "el",
+    "th",
 }
 
 # key is translated word language code, value is source Wiktionary edition codes
 KAIKKI_TRANSLATED_GLOSS_LANGS: dict[str, list[str]] = {
     "he": ["en"],  # English to Hebrew
-    "th": ["en"],
 }
 
 # has_exolex: has lemmas in other languages

@@ -359,7 +359,7 @@ def get_forms(
     word: str,
     lemma_lang: str,
     gloss_lang: str,
-    forms_data: list[dict[str, str]],
+    forms_data: list[dict[str, Any]],
     pos: str,
     len_limit: int,
 ) -> set[str]:

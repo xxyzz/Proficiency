@@ -40,7 +40,7 @@ def get_short_def(gloss: str, gloss_lang: str) -> str:
         gloss,
     )
     gloss = min(re.split(";|；", gloss), key=len)
-    gloss = re.split(r",|，", gloss, 1)[0]
+    gloss = re.split(r",|，", gloss, maxsplit=1)[0]
     gloss = min(gloss.split("/"), key=len)
     if gloss_lang == "zh":
         gloss = min(gloss.split("、"), key=len)
@@ -81,7 +81,12 @@ def freq_to_difficulty(word: str, lang: str) -> tuple[bool, int]:
     """
     from wordfreq import zipf_frequency
 
-    freq = math.floor(zipf_frequency(word, lang))
+    try:
+        freq = math.floor(zipf_frequency(word, lang))
+    except LookupError:
+        # Thai not supported by wordfreq
+        return True, 1
+
     if freq == 0:
         return True, 1
     if freq >= 7:

@@ -143,7 +143,7 @@ def archive_files(
             not is_zh_cn and "zh_cn" in path.name
         ):
             continue
-        _, lemma_code, gloss_code, _ = re.split(r"\.|_", path.name, 3)
+        _, lemma_code, gloss_code, _ = re.split(r"\.|_", path.name, maxsplit=3)
         tar_name = f"{lemma_code}_{gloss_code}"
         if is_zh_cn:
             tar_name += "_cn"
