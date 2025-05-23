@@ -370,16 +370,17 @@ def get_forms(
         forms_data = [
             data
             for data in forms_data
-            if "tags" not in data
-            or (
-                "tags" in data
-                and not any(tag in FORM_TAGS_TO_IGNORE for tag in data["tags"])
-            )
+            if not any(tag in FORM_TAGS_TO_IGNORE for tag in data.get("tags", []))
         ]
 
-    for form in map(lambda x: x.get("form", ""), forms_data):
-        if form and form != word and len(form) >= len_limit:
-            forms.add(form)
+    for form in forms_data:
+        form_str = form.get("form", "")
+        if form_str in ["", word] or len(form_str) < len_limit:
+            continue
+        form_tags = form.get("tags", [])
+        if "table-tags" in form_tags or "inflection-template" in form_tags:
+            continue  # English Wiktionary data
+        forms.add(form_str)
 
     if lemma_lang == "cs":
         if (
