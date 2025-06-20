@@ -67,8 +67,9 @@ def download_dbnary_file(url: str) -> None:
 
 def insert_lemmas(
     store: Store, conn: sqlite3.Connection, lemma_lang: str
-) -> dict[str, int]:
+) -> tuple[dict[str, int], dict[str, int]]:
     lemma_ids: dict[str, int] = {}
+    sound_ids: dict[str, int] = {}
     lemma_length_limit = get_shortest_lemma_length(lemma_lang)
     query = rf"""
     PREFIX lexinfo:  <http://www.lexinfo.net/ontology/2.0/lexinfo#>
@@ -100,12 +101,18 @@ def insert_lemmas(
         lemma = lemmas[0]
         if lemma not in lemma_ids:
             for (lemma_id,) in conn.execute(
-                "INSERT INTO lemmas (lemma, ipa) VALUES(?, ?) RETURNING id",
-                (lemma, query_result["ipa"].value if query_result["ipa"] else None),
+                "INSERT INTO lemmas (lemma) VALUES(?) RETURNING id", (lemma,)
             ):
                 lemma_ids[lemma] = lemma_id
         else:
             lemma_id = lemma_ids[lemma]
+        if query_result["ipa"] is not None:
+            ipa = query_result["ipa"].value
+            if lemma not in sound_ids:
+                for (sound_id,) in conn.execute(
+                    "INSERT INTO sounds (ipa) VALUES(?) RETURNING id", (ipa,)
+                ):
+                    sound_ids[lemma] = sound_id
         pos = dbnary_to_kaikki_pos(query_result["pos"].value)
         for other_form in lemmas[1:]:
             conn.execute(
@@ -113,7 +120,7 @@ def insert_lemmas(
                 (other_form, pos, lemma_id),
             )
 
-    return lemma_ids
+    return lemma_ids, sound_ids
 
 
 def insert_forms(
@@ -159,6 +166,7 @@ def insert_senses(
     lemma_lang: str,
     gloss_lang: str,
     lemma_ids: dict[str, int],
+    sound_ids: dict[str, int],
 ) -> None:
     enabled_lemma_pos: set[str] = set()
     difficulty_data = load_difficulty_data(lemma_lang)
@@ -217,10 +225,11 @@ def insert_senses(
                     short_def = full_def
                 conn.execute(
                     """
-             INSERT INTO senses
-             (enabled, lemma_id, pos, short_def, full_def, example, difficulty)
-             VALUES(?, ?, ?, ?, ?, ?, ?)
-             """,
+                    INSERT INTO senses
+                    (enabled, lemma_id, pos, short_def, full_def, example,
+                    difficulty, sound_id)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
                     (
                         enabled,
                         lemma_id,
@@ -231,6 +240,7 @@ def insert_senses(
                         if query_result["example"]
                         else None,
                         difficulty,
+                        sound_ids.get(lemma),
                     ),
                 )
 
@@ -256,13 +266,13 @@ def create_lemmas_db_from_dbnary(
     store: Store, lemma_lang: str, gloss_lang: str, has_morphology: bool
 ) -> list[Path]:
     db_path = wiktionary_db_path(lemma_lang, gloss_lang)
-    conn = init_db(db_path, lemma_lang, False, False)
+    conn = init_db(db_path)
     lemma_lang = convert_lang_code(lemma_lang)
     gloss_lang = convert_lang_code(gloss_lang)
-    lemma_ids = insert_lemmas(store, conn, lemma_lang)
+    lemma_ids, sound_ids = insert_lemmas(store, conn, lemma_lang)
     if has_morphology and lemma_lang == gloss_lang:
         insert_forms(store, conn, lemma_lang, lemma_ids)
-    insert_senses(store, conn, lemma_lang, gloss_lang, lemma_ids)
+    insert_senses(store, conn, lemma_lang, gloss_lang, lemma_ids, sound_ids)
     create_indexes_then_close(conn, lemma_lang)
     return [db_path]
 

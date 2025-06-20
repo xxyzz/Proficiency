@@ -66,3 +66,9 @@ jobs:
           if-no-files-found: error
           path: |
             **/*.bz2
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.gloss_lang }}-wsd
+          path: |
+            **/*.zst

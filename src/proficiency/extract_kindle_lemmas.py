@@ -72,7 +72,7 @@ def create_kindle_lemmas_db(db_path: Path) -> None:
     ) as f:
         enabled_lemmas = json.load(f)
     enabled_sense_ids: set[int] = {data[1] for data in enabled_lemmas.values()}
-    conn = init_db(db_path, "en", True, False)
+    conn = init_db(db_path)
 
     with (files("proficiency") / "en" / "kindle_all_lemmas.csv").open(  # type: ignore
         newline="", encoding="utf-8"

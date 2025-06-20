@@ -3,13 +3,13 @@ import re
 import sqlite3
 import subprocess
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from shutil import which
 from typing import Any
 
 from .database import create_indexes_then_close, init_db, wiktionary_db_path
-from .languages import KAIKKI_TRANSLATED_GLOSS_LANGS
+from .languages import KAIKKI_TRANSLATED_GLOSS_LANGS, WSD_LANGS
 from .util import (
     freq_to_difficulty,
     get_short_def,
@@ -36,11 +36,18 @@ USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
 
 
 @dataclass
+class Example:
+    text: str = ""
+    offsets: str = ""
+
+
+@dataclass
 class Sense:
     enabled: bool = False
     short_gloss: str = ""
     gloss: str = ""
-    example: str = ""
+    short_example: str = ""
+    examples: list[Example] = field(default_factory=list)
 
 
 def download_kaikki_json(lemma_lang: str, gloss_lang: str) -> None:
@@ -94,10 +101,10 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
     kaikki_json_path, difficulty_data = load_data(lemma_lang, gloss_lang)
 
     db_path = wiktionary_db_path(lemma_lang, gloss_lang)
-    conn = init_db(db_path, lemma_lang, False, True)
+    conn = init_db(db_path)
     if gloss_lang == "zh":
         zh_cn_db_path = wiktionary_db_path(lemma_lang, "zh_cn")
-        zh_cn_conn = init_db(zh_cn_db_path, lemma_lang, False, True)
+        zh_cn_conn = init_db(zh_cn_db_path)
 
     enabled_words_pos: set[str] = set()
     len_limit = get_shortest_lemma_length(lemma_lang)
@@ -107,7 +114,7 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
         converter = opencc.OpenCC("t2s.json")
 
     lemma_ids: dict[str, int] = {}
-
+    sound_ids: dict[str, int] = {}
     with open(kaikki_json_path, encoding="utf-8") as f:
         for line in f:
             data = json.loads(line)
@@ -159,12 +166,16 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 lemma_id = insert_lemma(
                     word,
                     lemma_lang,
-                    ipas,
                     lemma_ids,
                     [conn, zh_cn_conn] if gloss_lang == "zh" else [conn],
                 )
                 insert_forms(conn, forms, pos, lemma_id)
-                insert_senses(conn, sense_data, lemma_id, pos, difficulty)
+                sound_id = insert_sound(
+                    [conn, zh_cn_conn] if gloss_lang == "zh" else [conn],
+                    ipas,
+                    sound_ids,
+                )
+                insert_senses(conn, sense_data, lemma_id, pos, difficulty, sound_id)
                 if gloss_lang == "zh":
                     insert_forms(zh_cn_conn, forms, pos, lemma_id)
                     zh_cn_senses = [
@@ -172,15 +183,19 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                             enabled=sense.enabled,
                             short_gloss=converter.convert(sense.short_gloss),
                             gloss=converter.convert(sense.gloss),
-                            example=converter.convert(sense.example),
+                            short_example=converter.convert(sense.short_example),
                         )
                         for sense in sense_data
                     ]
-                    insert_senses(zh_cn_conn, zh_cn_senses, lemma_id, pos, difficulty)
+                    insert_senses(
+                        zh_cn_conn, zh_cn_senses, lemma_id, pos, difficulty, sound_id
+                    )
 
-    create_indexes_then_close(conn, lemma_lang)
+    create_indexes_then_close(conn, lemma_lang, close=False)
+    save_wsd_db(db_path, conn, lemma_lang, gloss_lang)
     if gloss_lang == "zh":
-        create_indexes_then_close(zh_cn_conn, "")
+        create_indexes_then_close(zh_cn_conn, "", close=False)
+        save_wsd_db(zh_cn_db_path, zh_cn_conn, lemma_lang, gloss_lang)
     kaikki_json_path.unlink()
     return [db_path, zh_cn_db_path] if gloss_lang == "zh" else [db_path]
 
@@ -188,42 +203,15 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
 def insert_lemma(
     lemma: str,
     lemma_lang: str,
-    ipas: dict[str, str] | str,
     lemma_ids: dict[str, int],
     conn_list: list[sqlite3.Connection],
 ) -> int:
     if lemma in lemma_ids:
         return lemma_ids[lemma]
-
-    if lemma_lang == "en":
-        sql = "INSERT INTO lemmas (lemma, ga_ipa, rp_ipa) VALUES(?, ?, ?) RETURNING id"
-    elif lemma_lang == "zh":
-        sql = (
-            "INSERT INTO lemmas (lemma, pinyin, bopomofo) VALUES(?, ?, ?) RETURNING id"
-        )
-    else:
-        sql = "INSERT INTO lemmas (lemma, ipa) VALUES(?, ?) RETURNING id"
-
-    if lemma_lang == "en":
-        ipas_data = (
-            (ipas.get("ga_ipa", ""), ipas.get("rp_ipa", ""))
-            if isinstance(ipas, dict)
-            else (ipas, "")
-        )
-        data = (lemma,) + ipas_data
-    elif lemma_lang == "zh":
-        ipas_data = (
-            (ipas.get("pinyin", ""), ipas.get("bopomofo", ""))
-            if isinstance(ipas, dict)
-            else (ipas, "")
-        )
-        data = (lemma,) + ipas_data
-    else:
-        data = (lemma, ipas)  # type: ignore
-
+    sql = "INSERT INTO lemmas (lemma) VALUES(?) RETURNING id"
     lemma_id = 0
     for conn in conn_list:
-        for (new_lemma_id,) in conn.execute(sql, data):
+        for (new_lemma_id,) in conn.execute(sql, (lemma,)):
             lemma_id = new_lemma_id
     lemma_ids[lemma] = lemma_id
     return lemma_id
@@ -244,38 +232,82 @@ def insert_senses(
     lemma_id: int,
     pos: str,
     difficulty: int,
+    sound_id: int | None,
 ) -> None:
-    conn.executemany(
-        """
-        INSERT INTO senses
-        (enabled, short_def, full_def, example, lemma_id, pos, difficulty)
-        VALUES(?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
+    for sense in senses:
+        for (sense_id,) in conn.execute(
+            """
+                INSERT INTO senses
+                (enabled, short_def, full_def, example, lemma_id, pos,
+                difficulty, sound_id)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+                RETURNING id
+                """,
             (
                 sense.enabled,
                 sense.short_gloss,
                 sense.gloss,
-                sense.example,
+                sense.short_example,
                 lemma_id,
                 pos,
                 difficulty,
-            )
-            for sense in senses
+                sound_id,
+            ),
+        ):
+            insert_examples(conn, sense, sense_id)
+
+
+def insert_examples(conn: sqlite3.Connection, sense: Sense, sense_id: int) -> None:
+    conn.executemany(
+        "INSERT INTO examples (sense_id, text, offsets) VALUES(?, ?, ?)",
+        (
+            (sense_id, example.text, json.dumps(example.offsets))
+            for example in sense.examples
+            if example.offsets != ""
         ),
     )
 
 
-def get_ipas(lang: str, sounds: list[dict[str, str]]) -> dict[str, str] | str:
+def insert_sound(
+    conn_list: list[sqlite3.Connection],
+    sound_data: dict[str, str],
+    sound_ids: dict[str, int],
+) -> int | None:
+    sound_key = "_".join(sound_data.values())
+    if sound_key == "":
+        return None
+    elif sound_key in sound_ids:
+        return sound_ids[sound_key]
+
+    sound_id = 0
+    for conn in conn_list:
+        for (s_id,) in conn.execute(
+            """
+            INSERT INTO sounds
+            (ipa, ga_ipa, rp_ipa, pinyin, bopomofo)
+            VALUES (?, ?, ?, ?, ?)
+            RETURNING id
+            """,
+            tuple(
+                sound_data.get(key, "")
+                for key in ["ipa", "ga_ipa", "rp_ipa", "pinyin", "bopomofo"]
+            ),
+        ):
+            sound_ids[sound_key] = s_id
+            sound_id = s_id
+    return sound_id
+
+
+def get_ipas(lang: str, sounds: list[dict[str, Any]]) -> dict[str, str]:
     ipas = {}
     if lang == "en":
         for sound in sounds:
-            ipa = sound.get("ipa")
-            if not ipa:
+            ipa = sound.get("ipa", "")
+            if ipa == "":
                 continue
-            tags = sound.get("tags")
-            if not tags:
-                return ipa
+            tags: list[str] = sound.get("tags", [])
+            if len(tags) == 0:
+                return {"ipa": ipa}
             if ("US" in tags or "General-American" in tags) and "ga_ipa" not in ipas:
                 ipas["ga_ipa"] = ipa
             if (
@@ -284,25 +316,27 @@ def get_ipas(lang: str, sounds: list[dict[str, str]]) -> dict[str, str] | str:
                 ipas["rp_ipa"] = ipa
     elif lang == "zh":
         for sound in sounds:
-            pron = sound.get("zh-pron")
-            if not pron:
+            pron = sound.get("zh-pron", "")
+            if pron == "":
                 continue
-            tags = sound.get("tags")
-            if not tags:
-                return pron
-            if "Mandarin" in tags:
-                if "Pinyin" in tags and "Pinyin" not in ipas:
+            lower_tags: list[str] = [t.lower() for t in sound.get("tags", [])]
+            if len(lower_tags) == 0:
+                return {"ipa": pron}
+            if "mandarin" in lower_tags:
+                if "pinyin" in lower_tags and "pinyin" not in lower_tags:
                     ipas["pinyin"] = pron
                 elif (
-                    "bopomofo" in tags or "Zhuyin" in tags
+                    "bopomofo" in lower_tags or "zhuyin" in lower_tags
                 ) and "bopomofo" not in ipas:
                     ipas["bopomofo"] = pron
     else:
         for sound in sounds:
-            if "ipa" in sound:
-                return sound["ipa"]
+            ipa = sound.get("ipa", "")
+            if ipa != "":
+                ipas["ipa"] = ipa
+                break
 
-    return ipas if ipas else ""
+    return ipas
 
 
 # https://lemminflect.readthedocs.io/en/latest/tags/
@@ -448,8 +482,8 @@ def get_senses(
     senses = []
     for sense in word_data.get("senses", []):
         examples = sense.get("examples", [])
+        examples = [e for e in examples if e.get("text", "") != ""]
         glosses = sense.get("glosses")
-        example_sent = ""
         if not glosses or is_form_entry(gloss_lang, sense):
             continue
         gloss = glosses[1] if len(glosses) > 1 else glosses[0]
@@ -463,29 +497,58 @@ def get_senses(
         if len(tags.intersection(FILTER_TAGS)) > 0:
             continue
 
-        for example_data in examples:
-            # Use the first example
-            example_text = example_data.get("text", "")
-            if len(example_text) > 0 and example_text != "(obsolete)":
-                example_sent = example_text
-                break
-            # Chinese Wiktionary
-            example_texts = example_data.get("texts", [])
-            if len(example_texts) > 0:
-                example_sent = example_texts[0]
-                break
-
         short_gloss = get_short_def(gloss, gloss_lang)
         if len(short_gloss) == 0:
             continue
+        short_example = ""
+        for example in examples:
+            example_text = example["text"]
+            if short_example == "" or len(example_text) < len(short_example):
+                short_example = example_text
         senses.append(
             Sense(
                 enabled=enabled,
                 short_gloss=short_gloss,
                 gloss=gloss,
-                example=example_sent,
+                short_example=short_example,
+                examples=[
+                    Example(
+                        text=example["text"],
+                        offsets=json.dumps(
+                            example.get(
+                                "bold_text_offsets",
+                                example.get("italic_text_offsets", ""),
+                            )
+                        ),
+                    )
+                    for example in examples
+                ],
             )
         )
         enabled = False
 
     return senses
+
+
+def save_wsd_db(
+    db_path: Path, conn: sqlite3.Connection, lemma_lang: str, gloss_lang: str
+) -> None:
+    if f"{lemma_lang}-{gloss_lang}" in WSD_LANGS:
+        split_stem = db_path.stem.rsplit("_", maxsplit=1)
+        new_stem = f"{split_stem[0]}_wsd_{split_stem[1]}"
+        wsd_path = db_path.with_stem(new_stem)
+        wsd_conn = sqlite3.connect(wsd_path)
+        with wsd_conn:
+            conn.backup(wsd_conn)
+            wsd_conn.execute("CREATE INDEX idx_examples ON examples (sense_id)")
+        wsd_conn.close()
+        subprocess.run(
+            ["zstd", "-z", "-19", str(wsd_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    conn.execute("DROP TABLE examples")
+    conn.commit()
+    conn.close()

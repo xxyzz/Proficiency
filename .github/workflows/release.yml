@@ -22,3 +22,4 @@ jobs:
           prerelease: ${{ endsWith(github.ref_name, 'dev') }}
           files: |
             **/*.bz2
+            **/*.zst

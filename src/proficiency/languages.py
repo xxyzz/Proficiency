@@ -55,6 +55,21 @@ KAIKKI_TRANSLATED_GLOSS_LANGS: dict[str, list[str]] = {
     "he": ["en"],  # English to Hebrew
 }
 
+WSD_LANGS = {
+    "en-en",
+    "de-en",
+    "es-en",
+    "fr-en",
+    "zh-en",
+    "ja-en",
+    "ko-en",
+    "ru-en",
+    "fr-fr",
+    "en-fr",
+    "de-de",
+    "en-de",
+}
+
 # has_exolex: has lemmas in other languages
 # has_morphology: has inflection forms data
 DBNARY_LANGS: dict[str, Any] = {
