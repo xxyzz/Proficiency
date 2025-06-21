@@ -17,7 +17,7 @@ from .util import (
     load_difficulty_data,
 )
 
-FILTER_TAGS = frozenset(
+FILTER_SENSE_TAGS = frozenset(
     {
         "alternative",
         "obsolete",
@@ -26,13 +26,26 @@ FILTER_TAGS = frozenset(
         "form-of",
         "misspelling",
         "alt-of",
-        "compound-of",  # Spanish
     }
 )
-SPANISH_INFLECTED_GLOSS = (
-    r"(?:first|second|third)-person|only used in|gerund combined with"
+FILTER_EN_FORM_TAGS = frozenset(
+    ["table-tags", "auxiliary", "class", "inflection-template"]
 )
 USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
+# tatuylonen/wiktextract#1263
+FILTER_EN_EXAMPLE_PREFIXES = (
+    "Active-voice counterpart:",
+    "Coordinate term:",
+    "Alternative forms:",
+    "Comeronyms:",
+    "Holonym:",
+    "Imperfective:",
+    "See synonyms at",
+    "Meronym:",
+    "Near-synonym:",
+    "Perfective:",
+    "Troponym:",
+)
 
 
 @dataclass
@@ -106,7 +119,6 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
         zh_cn_db_path = wiktionary_db_path(lemma_lang, "zh_cn")
         zh_cn_conn = init_db(zh_cn_db_path)
 
-    enabled_words_pos: set[str] = set()
     len_limit = get_shortest_lemma_length(lemma_lang)
     if lemma_lang == "zh" or gloss_lang == "zh":
         import opencc
@@ -124,7 +136,6 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 pos not in USED_POS_TYPES
                 or len(word) < len_limit
                 or re.match(r"\W|\d", word)
-                or is_form_entry(gloss_lang, data)
                 or (
                     gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS
                     and len(data.get("translations", [])) == 0
@@ -132,8 +143,7 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
             ):
                 continue
 
-            word_pos = f"{word} {pos}"
-            enabled = False if word_pos in enabled_words_pos else True
+            enabled = True
             difficulty = 1
             if difficulty_data:
                 if word in difficulty_data:
@@ -144,9 +154,6 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 disabled_by_freq, difficulty = freq_to_difficulty(word, lemma_lang)
                 if disabled_by_freq:
                     enabled = False
-
-            if enabled:
-                enabled_words_pos.add(word_pos)
 
             forms = get_forms(
                 word, lemma_lang, gloss_lang, data.get("forms", []), pos, len_limit
@@ -397,23 +404,17 @@ def get_forms(
     pos: str,
     len_limit: int,
 ) -> set[str]:
-    from wiktextract_lemmatization.utils import FORM_TAGS_TO_IGNORE, remove_accents
+    from wiktextract_lemmatization.utils import remove_accents
 
     forms: set[str] = set()
-    if lemma_lang in ["de", "da"]:  # German, Danish
-        forms_data = [
-            data
-            for data in forms_data
-            if not any(tag in FORM_TAGS_TO_IGNORE for tag in data.get("tags", []))
-        ]
-
     for form in forms_data:
         form_str = form.get("form", "")
         if form_str in ["", word] or len(form_str) < len_limit:
             continue
-        form_tags = form.get("tags", [])
-        if "table-tags" in form_tags or "inflection-template" in form_tags:
-            continue  # English Wiktionary data
+        if gloss_lang == "en" and any(
+            tag in FILTER_EN_FORM_TAGS for tag in form.get("tags", [])
+        ):
+            continue
         forms.add(form_str)
 
     if lemma_lang == "cs":
@@ -433,19 +434,6 @@ def get_forms(
     if lemma_lang in ["ru", "uk"]:  # Russian, Ukrainian
         forms |= {remove_accents(form) for form in forms}
     return forms
-
-
-ZH_FORMS_CAT_SUFFIXES = ("變格形", "變位形式", "複數形式")
-FR_FORMS_CAT_PREFIXES = ("Formes",)
-
-
-def is_form_entry(gloss_lang: str, sense_data: dict[str, list[str]]) -> bool:
-    for category in sense_data.get("categories", []):
-        if gloss_lang == "zh" and category.endswith(ZH_FORMS_CAT_SUFFIXES):
-            return True
-        if gloss_lang == "fr" and category.startswith(FR_FORMS_CAT_PREFIXES):
-            return True
-    return False
 
 
 def get_translated_senses(
@@ -482,50 +470,45 @@ def get_senses(
     senses = []
     for sense in word_data.get("senses", []):
         examples = sense.get("examples", [])
-        examples = [e for e in examples if e.get("text", "") != ""]
-        glosses = sense.get("glosses")
-        if not glosses or is_form_entry(gloss_lang, sense):
+        glosses = sense.get("glosses", [])
+        if len(glosses) == 0:
             continue
-        gloss = glosses[1] if len(glosses) > 1 else glosses[0]
-        if (
-            lemma_lang == "es"
-            and gloss_lang == "en"
-            and re.match(SPANISH_INFLECTED_GLOSS, gloss)
-        ):
-            continue
+        gloss = " ".join(glosses)
         tags = set(sense.get("tags", []))
-        if len(tags.intersection(FILTER_TAGS)) > 0:
+        if len(tags.intersection(FILTER_SENSE_TAGS)) > 0:
             continue
-
         short_gloss = get_short_def(gloss, gloss_lang)
         if len(short_gloss) == 0:
             continue
         short_example = ""
+        e_with_offsets = []
         for example in examples:
-            example_text = example["text"]
+            example_text = example.get("text", "")
+            # en Template:...
+            if example_text in ["", "[…"] or (
+                gloss_lang == "en"
+                and example_text.startswith(FILTER_EN_EXAMPLE_PREFIXES)
+            ):
+                continue
             if short_example == "" or len(example_text) < len(short_example):
                 short_example = example_text
+            offsets = example.get(
+                "bold_text_offsets",
+                example.get("italic_text_offsets", ""),
+            )
+            if offsets != "":
+                e_with_offsets.append(
+                    Example(text=example_text, offsets=json.dumps(offsets))
+                )
         senses.append(
             Sense(
                 enabled=enabled,
                 short_gloss=short_gloss,
                 gloss=gloss,
                 short_example=short_example,
-                examples=[
-                    Example(
-                        text=example["text"],
-                        offsets=json.dumps(
-                            example.get(
-                                "bold_text_offsets",
-                                example.get("italic_text_offsets", ""),
-                            )
-                        ),
-                    )
-                    for example in examples
-                ],
+                examples=e_with_offsets,
             )
         )
-        enabled = False
 
     return senses
 
