@@ -37,9 +37,6 @@ def split_kaikki_jsonl(
             lang_code = data["lang_code"]
             if lang_code in lemma_codes:
                 out_files[lang_code].write(line.decode("utf-8"))
-            elif lang_code == "mul":
-                for out_f in out_files.values():
-                    out_f.write(line.decode("utf-8"))
             else:
                 new_lang_code = convert_lang_code(lang_code)
                 if new_lang_code in lemma_codes:

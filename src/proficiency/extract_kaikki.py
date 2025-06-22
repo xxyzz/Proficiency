@@ -268,7 +268,7 @@ def insert_examples(conn: sqlite3.Connection, sense: Sense, sense_id: int) -> No
     conn.executemany(
         "INSERT INTO examples (sense_id, text, offsets) VALUES(?, ?, ?)",
         (
-            (sense_id, example.text, json.dumps(example.offsets))
+            (sense_id, example.text, example.offsets)
             for example in sense.examples
             if example.offsets != ""
         ),
