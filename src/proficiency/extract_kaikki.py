@@ -29,7 +29,7 @@ FILTER_SENSE_TAGS = frozenset(
     }
 )
 FILTER_EN_FORM_TAGS = frozenset(
-    ["table-tags", "auxiliary", "class", "inflection-template"]
+    ["table-tags", "auxiliary", "class", "inflection-template", "obsolete"]
 )
 USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
 # tatuylonen/wiktextract#1263
@@ -125,7 +125,8 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
 
         converter = opencc.OpenCC("t2s.json")
 
-    lemma_ids: dict[str, int] = {}
+    last_word = ""
+    form_group_ids: dict[str, int] = {}
     sound_ids: dict[str, int] = {}
     with open(kaikki_json_path, encoding="utf-8") as f:
         for line in f:
@@ -142,6 +143,9 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 )
             ):
                 continue
+            if last_word != word:
+                form_group_ids.clear()
+                sound_ids.clear()
 
             enabled = True
             difficulty = 1
@@ -170,21 +174,17 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
             )
             if len(sense_data) > 0:
                 ipas = get_ipas(lemma_lang, data.get("sounds", []))
-                lemma_id = insert_lemma(
-                    word,
-                    lemma_lang,
-                    lemma_ids,
-                    [conn, zh_cn_conn] if gloss_lang == "zh" else [conn],
-                )
-                insert_forms(conn, forms, pos, lemma_id)
+                form_group_id = insert_forms(conn, forms, form_group_ids)
                 sound_id = insert_sound(
                     [conn, zh_cn_conn] if gloss_lang == "zh" else [conn],
                     ipas,
                     sound_ids,
                 )
-                insert_senses(conn, sense_data, lemma_id, pos, difficulty, sound_id)
+                insert_senses(
+                    conn, sense_data, word, pos, difficulty, sound_id, form_group_id
+                )
                 if gloss_lang == "zh":
-                    insert_forms(zh_cn_conn, forms, pos, lemma_id)
+                    form_group_id = insert_forms(zh_cn_conn, forms, form_group_ids)
                     zh_cn_senses = [
                         Sense(
                             enabled=sense.enabled,
@@ -195,8 +195,15 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                         for sense in sense_data
                     ]
                     insert_senses(
-                        zh_cn_conn, zh_cn_senses, lemma_id, pos, difficulty, sound_id
+                        zh_cn_conn,
+                        zh_cn_senses,
+                        word,
+                        pos,
+                        difficulty,
+                        sound_id,
+                        form_group_id,
                     )
+                last_word = word
 
     create_indexes_then_close(conn, lemma_lang, close=False)
     save_wsd_db(db_path, conn, lemma_lang, gloss_lang)
@@ -207,47 +214,42 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
     return [db_path, zh_cn_db_path] if gloss_lang == "zh" else [db_path]
 
 
-def insert_lemma(
-    lemma: str,
-    lemma_lang: str,
-    lemma_ids: dict[str, int],
-    conn_list: list[sqlite3.Connection],
-) -> int:
-    if lemma in lemma_ids:
-        return lemma_ids[lemma]
-    sql = "INSERT INTO lemmas (lemma) VALUES(?) RETURNING id"
-    lemma_id = 0
-    for conn in conn_list:
-        for (new_lemma_id,) in conn.execute(sql, (lemma,)):
-            lemma_id = new_lemma_id
-    lemma_ids[lemma] = lemma_id
-    return lemma_id
-
-
 def insert_forms(
-    conn: sqlite3.Connection, forms: set[str], pos: str, lemma_id: int
-) -> None:
-    conn.executemany(
-        "INSERT OR IGNORE INTO forms VALUES(?, ?, ?)",
-        ((form, pos, lemma_id) for form in forms),
-    )
+    conn: sqlite3.Connection, forms: set[str], form_group_ids: dict[str, int]
+) -> int | None:
+    if len(forms) == 0:
+        return None
+    form_key = "_".join(sorted(forms))
+    if form_key in form_group_ids:
+        return form_group_ids[form_key]
+    for (form_group_id,) in conn.execute(
+        "INSERT INTO form_groups VALUES (NULL) RETURNING id"
+    ):
+        conn.executemany(
+            "INSERT OR IGNORE INTO forms (form, form_group_id) VALUES(?, ?)",
+            ((form, form_group_id) for form in forms),
+        )
+        form_group_ids[form_key] = form_group_id
+        return form_group_id
+    return 0
 
 
 def insert_senses(
     conn: sqlite3.Connection,
     senses: list[Sense],
-    lemma_id: int,
+    lemma: str,
     pos: str,
     difficulty: int,
     sound_id: int | None,
+    form_group_id: int | None,
 ) -> None:
     for sense in senses:
         for (sense_id,) in conn.execute(
             """
                 INSERT INTO senses
-                (enabled, short_def, full_def, example, lemma_id, pos,
-                difficulty, sound_id)
-                VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+                (enabled, short_def, full_def, example, lemma, pos,
+                difficulty, sound_id, form_group_id)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING id
                 """,
             (
@@ -255,10 +257,11 @@ def insert_senses(
                 sense.short_gloss,
                 sense.gloss,
                 sense.short_example,
-                lemma_id,
+                lemma,
                 pos,
                 difficulty,
                 sound_id,
+                form_group_id,
             ),
         ):
             insert_examples(conn, sense, sense_id)
@@ -468,49 +471,65 @@ def get_senses(
     lemma_lang: str, gloss_lang: str, word_data: dict[str, Any], enabled: bool
 ) -> list[Sense]:
     senses = []
+    first_glosses: dict[str, Sense] = {}
     for sense in word_data.get("senses", []):
         examples = sense.get("examples", [])
         glosses = sense.get("glosses", [])
         if len(glosses) == 0:
             continue
-        gloss = " ".join(glosses)
+        elif len(glosses) > 1 and glosses[0] in first_glosses:
+            parent_sense = first_glosses[glosses[0]]
+            short_example, e_with_offsets = get_examples(examples, gloss_lang)
+            if short_example != "" and len(short_example) < len(
+                parent_sense.short_example
+            ):
+                parent_sense.short_example = short_example
+            parent_sense.examples.extend(e_with_offsets)
+            continue
+        gloss = glosses[0]
+        if gloss == "":
+            continue
         tags = set(sense.get("tags", []))
         if len(tags.intersection(FILTER_SENSE_TAGS)) > 0:
             continue
         short_gloss = get_short_def(gloss, gloss_lang)
         if len(short_gloss) == 0:
-            continue
-        short_example = ""
-        e_with_offsets = []
-        for example in examples:
-            example_text = example.get("text", "")
-            # en Template:...
-            if example_text in ["", "[…"] or (
-                gloss_lang == "en"
-                and example_text.startswith(FILTER_EN_EXAMPLE_PREFIXES)
-            ):
-                continue
-            if short_example == "" or len(example_text) < len(short_example):
-                short_example = example_text
-            offsets = example.get(
-                "bold_text_offsets",
-                example.get("italic_text_offsets", ""),
-            )
-            if offsets != "":
-                e_with_offsets.append(
-                    Example(text=example_text, offsets=json.dumps(offsets))
-                )
-        senses.append(
-            Sense(
-                enabled=enabled,
-                short_gloss=short_gloss,
-                gloss=gloss,
-                short_example=short_example,
-                examples=e_with_offsets,
-            )
+            short_gloss = gloss
+        short_example, e_with_offsets = get_examples(examples, gloss_lang)
+        sense = Sense(
+            enabled=enabled,
+            short_gloss=short_gloss,
+            gloss=gloss,
+            short_example=short_example,
+            examples=e_with_offsets,
         )
+        senses.append(sense)
+        first_glosses[gloss] = sense
 
     return senses
+
+
+def get_examples(examples: dict, gloss_lang: str) -> tuple[str, list[Example]]:
+    short_example = ""
+    e_with_offsets = []
+    for example in examples:
+        example_text = example.get("text", "")
+        # en Template:...
+        if example_text in ["", "[…"] or (
+            gloss_lang == "en" and example_text.startswith(FILTER_EN_EXAMPLE_PREFIXES)
+        ):
+            continue
+        if short_example == "" or len(example_text) < len(short_example):
+            short_example = example_text
+        offsets = example.get(
+            "bold_text_offsets",
+            example.get("italic_text_offsets", ""),
+        )
+        if offsets != "":
+            e_with_offsets.append(
+                Example(text=example_text, offsets=json.dumps(offsets))
+            )
+    return short_example, e_with_offsets
 
 
 def save_wsd_db(

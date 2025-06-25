@@ -19,13 +19,6 @@ def init_db(db_path: Path) -> sqlite3.Connection:
     conn.executescript("""
     PRAGMA foreign_keys = ON;
 
-    CREATE TABLE lemmas (id INTEGER PRIMARY KEY, lemma TEXT COLLATE NOCASE);
-
-    CREATE TABLE forms (
-    form TEXT COLLATE NOCASE, pos TEXT, lemma_id INTEGER,
-    PRIMARY KEY(form, pos, lemma_id),
-    FOREIGN KEY(lemma_id) REFERENCES lemmas(id));
-
     CREATE TABLE sounds (
     id INTEGER PRIMARY KEY,
     ipa TEXT DEFAULT '',
@@ -34,10 +27,17 @@ def init_db(db_path: Path) -> sqlite3.Connection:
     pinyin TEXT DEFAULT '',
     bopomofo TEXT DEFAULT '');
 
+    CREATE TABLE form_groups (id INTEGER PRIMARY KEY);
+
+    CREATE TABLE forms (
+    form TEXT COLLATE NOCASE, form_group_id INTEGER,
+    PRIMARY KEY(form, form_group_id),
+    FOREIGN KEY(form_group_id) REFERENCES form_groups(id));
+
     CREATE TABLE senses (
     id INTEGER PRIMARY KEY,
     enabled INTEGER,
-    lemma_id INTEGER,
+    lemma TEXT COLLATE NOCASE,
     pos TEXT,
     short_def TEXT DEFAULT '',
     full_def TEXT DEFAULT '',
@@ -45,8 +45,10 @@ def init_db(db_path: Path) -> sqlite3.Connection:
     difficulty INTEGER,
     sound_id INTEGER,
     embed_vector TEXT DEFAULT '',
-    FOREIGN KEY(lemma_id) REFERENCES lemmas(id),
-    FOREIGN KEY(sound_id) REFERENCES sounds(id));
+    form_group_id INTEGER,
+    FOREIGN KEY(sound_id) REFERENCES sounds(id),
+    FOREIGN KEY(form_group_id) REFERENCES form_groups(id),
+    );
 
     CREATE TABLE examples (
     text TEXT, offsets TEXT, sense_id INTEGER,
@@ -59,8 +61,7 @@ def create_indexes_then_close(
     conn: sqlite3.Connection, lemma_lang: str, close: bool = True
 ) -> None:
     create_indexes_sql = """
-    CREATE INDEX idx_lemmas ON lemmas (lemma);
-    CREATE INDEX idx_senses ON senses (lemma_id, pos, sound_id);
+    CREATE INDEX idx_senses ON senses (lemma, pos, sound_id);
     """
     conn.executescript(create_indexes_sql)
     if lemma_lang != "":
