@@ -47,8 +47,7 @@ def init_db(db_path: Path) -> sqlite3.Connection:
     embed_vector TEXT DEFAULT '',
     form_group_id INTEGER,
     FOREIGN KEY(sound_id) REFERENCES sounds(id),
-    FOREIGN KEY(form_group_id) REFERENCES form_groups(id),
-    );
+    FOREIGN KEY(form_group_id) REFERENCES form_groups(id));
 
     CREATE TABLE examples (
     text TEXT, offsets TEXT, sense_id INTEGER,
@@ -65,7 +64,7 @@ def create_indexes_then_close(
     """
     conn.executescript(create_indexes_sql)
     if lemma_lang != "":
-        for (lemma_num,) in conn.execute("SELECT count(*) FROM lemmas"):
+        for (lemma_num,) in conn.execute("SELECT count(DISTINCT lemma) FROM senses"):
             print(f"{lemma_lang}: {lemma_num}")
     conn.commit()
     if close:

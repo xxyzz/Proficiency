@@ -46,6 +46,7 @@ FILTER_EN_EXAMPLE_PREFIXES = (
     "Perfective:",
     "Troponym:",
 )
+FILTER_EN_CAT_SUFFIXES = (" obsolete terms",)
 
 
 @dataclass
@@ -131,8 +132,8 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
     with open(kaikki_json_path, encoding="utf-8") as f:
         for line in f:
             data = json.loads(line)
-            word = data.get("word")
-            pos = data.get("pos")
+            word = data.get("word", "")
+            pos = data.get("pos", "")
             if (
                 pos not in USED_POS_TYPES
                 or len(word) < len_limit
@@ -140,6 +141,13 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                 or (
                     gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS
                     and len(data.get("translations", [])) == 0
+                )
+                or (
+                    gloss_lang == "en"
+                    and any(
+                        cat.endswith(FILTER_EN_CAT_SUFFIXES)
+                        for cat in data.get("categories", [])
+                    )
                 )
             ):
                 continue
