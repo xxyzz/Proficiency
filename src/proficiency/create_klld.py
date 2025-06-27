@@ -104,21 +104,16 @@ def create_klld_db(gloss_lang: str, lemma_lang: str) -> Path:
     create_klld_tables(klld_conn, lemma_lang, gloss_lang)
 
     lemma_ids = {}
-    for (lemma,) in wiktionary_conn.execute("SELECT DISTINCT lemma FROM senses"):
+    for (lemma,) in wiktionary_conn.execute("SELECT lemma FROM senses"):
+        if lemma in lemma_ids:
+            continue
         for (lemma_id,) in klld_conn.execute(
             "INSERT INTO lemmas (lemma) VALUES(?) RETURNING id", (lemma,)
         ):
             lemma_ids[lemma] = lemma_id
 
-    for (
-        sense_id,
-        lemma,
-        pos,
-        short_def,
-        full_def,
-        example,
-    ) in wiktionary_conn.execute(
-        "SELECT id, lemma, pos, short_def, full_def, example FROM senses"
+    for lemma, pos, short_def, full_def, example in wiktionary_conn.execute(
+        "SELECT lemma, pos, short_def, full_def, example FROM senses"
     ):
         if gloss_lang == "he":
             short_def = remove_rtl_pdi(short_def)
@@ -126,12 +121,12 @@ def create_klld_db(gloss_lang: str, lemma_lang: str) -> Path:
         lemma_id = lemma_ids[lemma]
         klld_conn.execute(
             """
-INSERT INTO senses (id, display_lemma_id, term_id, term_lemma_id, pos_type, source_id,
-sense_number, corpus_count , short_def, full_def, example_sentence)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO senses
+            (display_lemma_id, term_id, term_lemma_id, pos_type, source_id,
+            sense_number, corpus_count , short_def, full_def, example_sentence)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                sense_id,
                 lemma_id,
                 lemma_id,
                 lemma_id,
@@ -153,9 +148,9 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 
     klld_conn.executescript(
         """
-    CREATE INDEX senses_synset_id_index ON senses(synset_id);
-    CREATE INDEX senses_term_lemma_id_index ON senses(term_lemma_id);
-    """
+        CREATE INDEX senses_synset_id_index ON senses(synset_id);
+        CREATE INDEX senses_term_lemma_id_index ON senses(term_lemma_id);
+        """
     )
     klld_conn.commit()
     klld_conn.close()

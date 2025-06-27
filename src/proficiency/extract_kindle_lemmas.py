@@ -131,7 +131,7 @@ def insert_en_data(
     )
     conn.executemany(
         "INSERT OR IGNORE INTO forms (form, form_group_id) VALUES(?, ?)",
-        ((form, form_group_id) for form in forms)
+        ((form, form_group_id) for form in forms),
     )
 
 

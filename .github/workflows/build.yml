@@ -47,6 +47,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+          cache: 'pip'
 
       - name: Install package
         run: |
@@ -60,7 +61,7 @@ jobs:
 
       - uses: actions/cache@v4
         with:
-          path: build/{{ matrix.gloss_lang }}.jsonl.gz
+          path: build/${{ matrix.gloss_lang }}.jsonl.gz
           key: ${{ matrix.gloss_lang }}-${{ steps.kaikki-date.outputs.date }}
 
       - name: Create files

@@ -92,12 +92,7 @@ def download_kaikki_json(lemma_lang: str, gloss_lang: str) -> None:
             with gzip.open(gz_path, "rb") as gz_f:
                 split_kaikki_jsonl(gz_f, lemma_lang, gloss_lang)
         else:
-            command_args = [
-                "pigz" if which("pigz") is not None else "gzip",
-                "-d",
-                "-k",
-                "-c",
-            ]
+            command_args = ["pigz" if which("pigz") is not None else "gzip", "-d", "-c"]
             command_args.append(str(gz_path))
             sub_p = subprocess.Popen(command_args, stdout=subprocess.PIPE)
             if sub_p.stdout is not None:
