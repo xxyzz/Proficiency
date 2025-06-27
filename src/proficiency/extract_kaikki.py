@@ -186,9 +186,16 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
             )
             if len(sense_data) > 0:
                 ipas = get_ipas(lemma_lang, data.get("sounds", []))
-                for db_conn in [conn, zh_cn_conn] if gloss_lang == "zh" else [conn]:
-                    form_group_id = insert_forms(db_conn, forms, form_group_ids)
-                    sound_id = insert_sound(db_conn, ipas, sound_ids)
+                form_group_id = insert_forms(
+                    [conn, zh_cn_conn] if gloss_lang == "zh" else [conn],
+                    forms,
+                    form_group_ids,
+                )
+                sound_id = insert_sound(
+                    [conn, zh_cn_conn] if gloss_lang == "zh" else [conn],
+                    ipas,
+                    sound_ids,
+                )
                 insert_senses(
                     conn, sense_data, word, pos, difficulty, sound_id, form_group_id
                 )
@@ -223,7 +230,7 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
 
 
 def insert_forms(
-    conn: sqlite3.Connection, forms: set[str], form_group_ids: dict[str, int]
+    conn_list: list[sqlite3.Connection], forms: set[str], form_group_ids: dict[str, int]
 ) -> int | None:
     if len(forms) == 0:
         return None
@@ -231,14 +238,15 @@ def insert_forms(
     if form_key in form_group_ids:
         return form_group_ids[form_key]
     form_group_id = 0
-    for (form_group_id,) in conn.execute(
-        "INSERT INTO form_groups VALUES (NULL) RETURNING id"
-    ):
-        conn.executemany(
-            "INSERT OR IGNORE INTO forms (form, form_group_id) VALUES(?, ?)",
-            ((form, form_group_id) for form in forms),
-        )
-        form_group_ids[form_key] = form_group_id
+    for conn in conn_list:
+        for (form_group_id,) in conn.execute(
+            "INSERT INTO form_groups VALUES (NULL) RETURNING id"
+        ):
+            conn.executemany(
+                "INSERT OR IGNORE INTO forms (form, form_group_id) VALUES(?, ?)",
+                ((form, form_group_id) for form in forms),
+            )
+            form_group_ids[form_key] = form_group_id
     return form_group_id
 
 
@@ -287,7 +295,7 @@ def insert_examples(conn: sqlite3.Connection, sense: Sense, sense_id: int) -> No
 
 
 def insert_sound(
-    conn: sqlite3.Connection,
+    conn_list: list[sqlite3.Connection],
     sound_data: dict[str, str],
     sound_ids: dict[str, int],
 ) -> int | None:
@@ -298,19 +306,20 @@ def insert_sound(
         return sound_ids[sound_key]
 
     sound_id = 0
-    for (sound_id,) in conn.execute(
-        """
-        INSERT INTO sounds
-        (ipa, ga_ipa, rp_ipa, pinyin, bopomofo)
-        VALUES (?, ?, ?, ?, ?)
-        RETURNING id
-        """,
-        tuple(
-            sound_data.get(key, "")
-            for key in ["ipa", "ga_ipa", "rp_ipa", "pinyin", "bopomofo"]
-        ),
-    ):
-        sound_ids[sound_key] = sound_id
+    for conn in conn_list:
+        for (sound_id,) in conn.execute(
+            """
+            INSERT INTO sounds
+            (ipa, ga_ipa, rp_ipa, pinyin, bopomofo)
+            VALUES (?, ?, ?, ?, ?)
+            RETURNING id
+            """,
+            tuple(
+                sound_data.get(key, "")
+                for key in ["ipa", "ga_ipa", "rp_ipa", "pinyin", "bopomofo"]
+            ),
+        ):
+            sound_ids[sound_key] = sound_id
     return sound_id
 
 
