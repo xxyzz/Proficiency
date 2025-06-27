@@ -40,19 +40,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        gloss_lang: ['de', 'el', 'en', 'es', 'fi', 'fr', 'he', 'hr', 'it', 'ja', 'lt', 'nl', 'nb', 'pl', 'pt', 'ru', 'sv', 'th', 'zh', 'ko']
+        gloss_lang: ['de', 'el', 'en', 'es', 'fr', 'he', 'it', 'ja', 'nl', 'pl', 'pt', 'ru', 'th', 'zh', 'ko']
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-          cache: 'pip'
 
       - name: Install package
         run: |
           sudo apt install -y lbzip2
-          python -m pip install .
+          python -m pip install .[dev]
+
+      - name: Get kaikki date
+        id: kaikki-date
+        run: |
+          echo "date=$(python kaikki.py ${{ matrix.gloss_lang }})" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        with:
+          path: build/{{ matrix.gloss_lang }}.jsonl.gz
+          key: ${{ matrix.gloss_lang }}-${{ steps.kaikki-date.outputs.date }}
 
       - name: Create files
         run: proficiency ${{ matrix.gloss_lang }}

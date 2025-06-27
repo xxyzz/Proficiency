@@ -92,14 +92,18 @@ def download_kaikki_json(lemma_lang: str, gloss_lang: str) -> None:
             with gzip.open(gz_path, "rb") as gz_f:
                 split_kaikki_jsonl(gz_f, lemma_lang, gloss_lang)
         else:
-            command_args = ["pigz" if which("pigz") is not None else "gzip", "-d", "-c"]
+            command_args = [
+                "pigz" if which("pigz") is not None else "gzip",
+                "-d",
+                "-k",
+                "-c",
+            ]
             command_args.append(str(gz_path))
             sub_p = subprocess.Popen(command_args, stdout=subprocess.PIPE)
             if sub_p.stdout is not None:
                 with sub_p.stdout as f:
                     split_kaikki_jsonl(f, lemma_lang, gloss_lang)
             sub_p.wait()
-            gz_path.unlink()
 
 
 def load_data(lemma_lang: str, gloss_lang: str) -> tuple[Path, dict[str, int]]:
@@ -182,17 +186,13 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
             )
             if len(sense_data) > 0:
                 ipas = get_ipas(lemma_lang, data.get("sounds", []))
-                form_group_id = insert_forms(conn, forms, form_group_ids)
-                sound_id = insert_sound(
-                    [conn, zh_cn_conn] if gloss_lang == "zh" else [conn],
-                    ipas,
-                    sound_ids,
-                )
+                for db_conn in [conn, zh_cn_conn] if gloss_lang == "zh" else [conn]:
+                    form_group_id = insert_forms(db_conn, forms, form_group_ids)
+                    sound_id = insert_sound(db_conn, ipas, sound_ids)
                 insert_senses(
                     conn, sense_data, word, pos, difficulty, sound_id, form_group_id
                 )
                 if gloss_lang == "zh":
-                    form_group_id = insert_forms(zh_cn_conn, forms, form_group_ids)
                     zh_cn_senses = [
                         Sense(
                             enabled=sense.enabled,
@@ -230,6 +230,7 @@ def insert_forms(
     form_key = "_".join(sorted(forms))
     if form_key in form_group_ids:
         return form_group_ids[form_key]
+    form_group_id = 0
     for (form_group_id,) in conn.execute(
         "INSERT INTO form_groups VALUES (NULL) RETURNING id"
     ):
@@ -238,8 +239,7 @@ def insert_forms(
             ((form, form_group_id) for form in forms),
         )
         form_group_ids[form_key] = form_group_id
-        return form_group_id
-    return 0
+    return form_group_id
 
 
 def insert_senses(
@@ -287,7 +287,7 @@ def insert_examples(conn: sqlite3.Connection, sense: Sense, sense_id: int) -> No
 
 
 def insert_sound(
-    conn_list: list[sqlite3.Connection],
+    conn: sqlite3.Connection,
     sound_data: dict[str, str],
     sound_ids: dict[str, int],
 ) -> int | None:
@@ -298,21 +298,19 @@ def insert_sound(
         return sound_ids[sound_key]
 
     sound_id = 0
-    for conn in conn_list:
-        for (s_id,) in conn.execute(
-            """
-            INSERT INTO sounds
-            (ipa, ga_ipa, rp_ipa, pinyin, bopomofo)
-            VALUES (?, ?, ?, ?, ?)
-            RETURNING id
-            """,
-            tuple(
-                sound_data.get(key, "")
-                for key in ["ipa", "ga_ipa", "rp_ipa", "pinyin", "bopomofo"]
-            ),
-        ):
-            sound_ids[sound_key] = s_id
-            sound_id = s_id
+    for (sound_id,) in conn.execute(
+        """
+        INSERT INTO sounds
+        (ipa, ga_ipa, rp_ipa, pinyin, bopomofo)
+        VALUES (?, ?, ?, ?, ?)
+        RETURNING id
+        """,
+        tuple(
+            sound_data.get(key, "")
+            for key in ["ipa", "ga_ipa", "rp_ipa", "pinyin", "bopomofo"]
+        ),
+    ):
+        sound_ids[sound_key] = sound_id
     return sound_id
 
 

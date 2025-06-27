@@ -10,15 +10,9 @@ from importlib.metadata import version
 from pathlib import Path
 
 from .create_klld import create_klld_db
-from .extract_dbnary import (
-    create_lemmas_db_from_dbnary,
-    download_dbnary_files,
-    init_oxigraph_store,
-)
 from .extract_kaikki import create_lemmas_db_from_kaikki, download_kaikki_json
 from .extract_kindle_lemmas import create_kindle_lemmas_db
 from .languages import (
-    DBNARY_LANGS,
     KAIKKI_GLOSS_LANGS,
     KAIKKI_LEMMA_LANGS,
     KAIKKI_TRANSLATED_GLOSS_LANGS,
@@ -37,26 +31,11 @@ def create_wiktionary_files_from_kaikki(
     return create_lemmas_db_from_kaikki(lemma_lang, gloss_lang)
 
 
-def create_wiktionary_files_from_dbnary(
-    lemma_langs: list[str], gloss_lang: str
-) -> list[Path]:
-    download_dbnary_files(gloss_lang)
-    store, has_morphology = init_oxigraph_store(gloss_lang)
-    db_paths: list[Path] = []
-    for lemma_lang in lemma_langs:
-        db_paths.extend(
-            create_lemmas_db_from_dbnary(store, lemma_lang, gloss_lang, has_morphology)
-        )
-    return db_paths
-
-
 def main() -> None:
     logging.basicConfig(
         format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
     )
-    gloss_languages = (
-        KAIKKI_GLOSS_LANGS | KAIKKI_TRANSLATED_GLOSS_LANGS.keys() | DBNARY_LANGS.keys()
-    )
+    gloss_languages = KAIKKI_GLOSS_LANGS | KAIKKI_TRANSLATED_GLOSS_LANGS.keys()
     parser = argparse.ArgumentParser()
     parser.add_argument("gloss_lang", choices=gloss_languages)
     parser.add_argument(
@@ -67,16 +46,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     if args.gloss_lang not in KAIKKI_GLOSS_LANGS | KAIKKI_TRANSLATED_GLOSS_LANGS.keys():
-        available_lemma_languages: set[str] = set()
-        if DBNARY_LANGS[args.gloss_lang]["has_exolex"]:
-            if "lemma_languages" in DBNARY_LANGS[args.gloss_lang]:
-                available_lemma_languages = DBNARY_LANGS[args.gloss_lang][
-                    "lemma_languages"
-                ]
-            else:
-                available_lemma_languages = KAIKKI_GLOSS_LANGS
-        else:
-            available_lemma_languages = {args.gloss_lang}
+        available_lemma_languages = {args.gloss_lang}
         lemma_languages = set(args.lemma_lang_codes) & available_lemma_languages
         if len(lemma_languages) == 0:
             logging.error(
@@ -103,10 +73,6 @@ def main() -> None:
                 args.lemma_lang_codes,
             ):
                 file_paths.extend(db_paths)
-        else:
-            file_paths = create_wiktionary_files_from_dbnary(
-                args.lemma_lang_codes, args.gloss_lang
-            )
         logging.info("Wiktionary files created")
 
         logging.info("Creating Kindle files")

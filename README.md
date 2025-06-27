@@ -4,7 +4,9 @@ Language files for [WordDumb](https://github.com/xxyzz/WordDumb).
 
 ## Data source
 
-Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about-dbnary). Word difficulty data sources are listed in each language subfolders.
+Wiktionary data come from https://kaikki.org
+
+Word difficulty data sources are listed in each language subfolders.
 
 ## Dependencies
 
@@ -23,8 +25,6 @@ Wiktionary data come from kaikki.org and [Dbnary](https://kaiko.getalp.org/about
 - [Perl](https://www.perl.org): Remove invalid text in Dbnary files
 
 - lbzip2 or bzip2
-
-- [oxigraph](https://github.com/oxigraph/oxigraph)
 
 - pigz or gzip
 
