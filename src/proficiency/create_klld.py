@@ -103,8 +103,12 @@ def create_klld_db(gloss_lang: str, lemma_lang: str) -> Path:
     wiktionary_conn = sqlite3.connect(wiktionary_db_path(lemma_lang, gloss_lang))
     create_klld_tables(klld_conn, lemma_lang, gloss_lang)
 
-    for data in wiktionary_conn.execute("SELECT DISTINCT lemma FROM senses"):
-        klld_conn.execute("INSERT INTO lemmas (lemma) VALUES(?)", data)
+    lemma_ids = {}
+    for (lemma,) in wiktionary_conn.execute("SELECT DISTINCT lemma FROM senses"):
+        for (lemma_id,) in klld_conn.execute(
+            "INSERT INTO lemmas (lemma) VALUES(?) RETURNING id", (lemma,)
+        ):
+            lemma_ids[lemma] = lemma_id
 
     for (
         sense_id,
@@ -119,11 +123,7 @@ def create_klld_db(gloss_lang: str, lemma_lang: str) -> Path:
         if gloss_lang == "he":
             short_def = remove_rtl_pdi(short_def)
             full_def = remove_rtl_pdi(full_def)
-        lemma_id = 0
-        for (l_id,) in klld_conn.execute(
-            "SELECT id FROM lemmas WHERE lemma = ?", (lemma,)
-        ):
-            lemma_id = l_id
+        lemma_id = lemma_ids[lemma]
         klld_conn.execute(
             """
 INSERT INTO senses (id, display_lemma_id, term_id, term_lemma_id, pos_type, source_id,
