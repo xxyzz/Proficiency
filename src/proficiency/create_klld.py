@@ -146,7 +146,7 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 base64.b64encode(remove_full_stop(example).encode("utf-8")).decode(
                     "utf-8"
                 )
-                if example is not None
+                if example is not None and len(example) > 0
                 else None,
             ),
         )
