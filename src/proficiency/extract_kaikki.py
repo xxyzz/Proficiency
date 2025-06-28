@@ -46,7 +46,7 @@ FILTER_EN_EXAMPLE_PREFIXES = (
     "Perfective:",
     "Troponym:",
 )
-FILTER_EN_CAT_SUFFIXES = (" obsolete terms",)
+FILTER_EN_CAT_SUFFIXES = (" obsolete terms", " censored spellings")
 
 
 @dataclass
