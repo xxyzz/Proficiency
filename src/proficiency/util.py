@@ -13,7 +13,7 @@ def get_shortest_lemma_length(lemma_lang: str) -> int:
 
 
 def remove_full_stop(text: str) -> str:
-    return text.removesuffix(".").removesuffix("。")
+    return text.strip().rstrip(".。")
 
 
 def remove_parentheses(text: str) -> str:
@@ -46,7 +46,7 @@ def get_short_def(gloss: str, gloss_lang: str) -> str:
         gloss = min(gloss.split("、"), key=len)
     if gloss_lang == "es" and "|" in gloss:
         gloss = gloss.split("|", 1)[1]
-    return remove_full_stop(gloss.strip())
+    return remove_full_stop(gloss)
 
 
 def load_difficulty_data(lemma_lang: str) -> dict[str, int]:

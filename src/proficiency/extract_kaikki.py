@@ -15,6 +15,7 @@ from .util import (
     get_short_def,
     get_shortest_lemma_length,
     load_difficulty_data,
+    remove_full_stop,
 )
 
 FILTER_SENSE_TAGS = frozenset(
@@ -47,6 +48,39 @@ FILTER_EN_EXAMPLE_PREFIXES = (
     "Troponym:",
 )
 FILTER_EN_CAT_SUFFIXES = (" obsolete terms", " censored spellings")
+FILTER_EN_SINGLE_SENSE_CAT_SUFFIXES = (
+    ":Zoology",
+    ":Anthropology",
+    ":Entomology",
+    ":Ornithology",
+    ":Ichthyology",
+    ":Malacology",
+    ":Chemistry",
+    ":Chemical reactions",
+    ":Physical chemistry",
+    ":Pharmacology",
+    ":Pharmaceutical drugs",
+    ":Pharmaceutical effects",
+    ":Drugs",
+    ":Alkaloids",
+    ":Organic chemistry",
+    ":Organic compounds",
+    ":Carboxylic acids",
+    ":Carbohydrates",
+    ":Medicine",
+    ":Biochemistry",
+    ":Steroids",
+    ":Inorganic chemistry",
+    ":Anatomy",
+    ":Physiology",
+    ":Pathology",
+    ":Surgery",
+)
+REMOVE_EN_GLOSS_PREFIXES = (
+    "Synonym of ",
+    "Characterised or marked by ",
+    "Characterised by ",
+)
 
 
 @dataclass
@@ -485,7 +519,18 @@ def get_senses(
     for sense in word_data.get("senses", []):
         examples = sense.get("examples", [])
         glosses = sense.get("glosses", [])
+        cats = sense.get("categories", [])
         if len(glosses) == 0:
+            continue
+        elif gloss_lang == "en" and any(
+            cat.endswith(FILTER_EN_CAT_SUFFIXES) for cat in cats
+        ):
+            continue
+        elif (
+            gloss_lang == "en"
+            and len(word_data["senses"]) == 1
+            and any(cat.endswith(FILTER_EN_SINGLE_SENSE_CAT_SUFFIXES) for cat in cats)
+        ):
             continue
         elif len(glosses) > 1 and glosses[0] in first_glosses:
             parent_sense = first_glosses[glosses[0]]
@@ -497,8 +542,11 @@ def get_senses(
             parent_sense.examples.extend(e_with_offsets)
             continue
         gloss = glosses[0]
-        if gloss == "":
+        if remove_full_stop(gloss) == "":
             continue
+        if gloss_lang == "en":
+            for prefix in REMOVE_EN_GLOSS_PREFIXES:
+                gloss = gloss.removeprefix(prefix).strip()
         tags = set(sense.get("tags", []))
         if len(tags.intersection(FILTER_SENSE_TAGS)) > 0:
             continue
