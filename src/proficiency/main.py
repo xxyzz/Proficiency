@@ -35,28 +35,29 @@ def main() -> None:
     logging.basicConfig(
         format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
     )
-    gloss_languages = KAIKKI_GLOSS_LANGS | KAIKKI_TRANSLATED_GLOSS_LANGS.keys()
+    gloss_languages = KAIKKI_GLOSS_LANGS.keys() | KAIKKI_TRANSLATED_GLOSS_LANGS.keys()
     parser = argparse.ArgumentParser()
     parser.add_argument("gloss_lang", choices=gloss_languages)
     parser.add_argument(
         "--lemma-lang-codes",
         nargs="*",
-        default=KAIKKI_LEMMA_LANGS,
+        default=[],
         choices=KAIKKI_LEMMA_LANGS,
     )
     args = parser.parse_args()
-    if args.gloss_lang not in KAIKKI_GLOSS_LANGS | KAIKKI_TRANSLATED_GLOSS_LANGS.keys():
-        available_lemma_languages = {args.gloss_lang}
-        lemma_languages = set(args.lemma_lang_codes) & available_lemma_languages
-        if len(lemma_languages) == 0:
-            logging.error(
-                "Invalid lemma language code, available codes: "
-                + str(available_lemma_languages)
-            )
-            raise ValueError
-        args.lemma_lang_codes = list(lemma_languages)
     if args.gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS:
-        args.lemma_lang_codes = KAIKKI_TRANSLATED_GLOSS_LANGS[args.gloss_lang]
+        if len(args.lemma_lang_codes) == 0:
+            args.lemma_lang_codes = KAIKKI_TRANSLATED_GLOSS_LANGS[args.gloss_lang]
+        else:
+            for lemma_lang in args.lemma_lang_codes:
+                if lemma_lang not in KAIKKI_TRANSLATED_GLOSS_LANGS[args.gloss_lang]:
+                    raise ValueError("Unsupported lemma language")
+    elif len(args.lemma_lang_codes) == 0:
+        args.lemma_lang_codes = KAIKKI_GLOSS_LANGS[args.gloss_lang]
+    else:
+        for lemma_lang in args.lemma_lang_codes:
+            if lemma_lang not in KAIKKI_GLOSS_LANGS[args.gloss_lang]:
+                raise ValueError("Unsupported lemma language")
 
     with ProcessPoolExecutor(
         mp_context=multiprocessing.get_context("spawn")
