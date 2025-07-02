@@ -30,9 +30,8 @@ def init_db(db_path: Path) -> sqlite3.Connection:
     CREATE TABLE form_groups (id INTEGER PRIMARY KEY);
 
     CREATE TABLE forms (
-    form TEXT COLLATE NOCASE, form_group_id INTEGER,
-    PRIMARY KEY(form, form_group_id),
-    FOREIGN KEY(form_group_id) REFERENCES form_groups(id));
+    form TEXT COLLATE NOCASE, form_group_id INTEGER REFERENCES form_groups(id),
+    PRIMARY KEY(form, form_group_id));
 
     CREATE TABLE senses (
     id INTEGER PRIMARY KEY,
@@ -43,15 +42,12 @@ def init_db(db_path: Path) -> sqlite3.Connection:
     full_def TEXT DEFAULT '',
     example TEXT DEFAULT '',
     difficulty INTEGER,
-    sound_id INTEGER,
+    sound_id INTEGER REFERENCES sounds(id),
     embed_vector TEXT DEFAULT '',
-    form_group_id INTEGER,
-    FOREIGN KEY(sound_id) REFERENCES sounds(id),
-    FOREIGN KEY(form_group_id) REFERENCES form_groups(id));
+    form_group_id INTEGER REFERENCES form_groups(id));
 
     CREATE TABLE examples (
-    text TEXT, offsets TEXT, sense_id INTEGER,
-    FOREIGN KEY(sense_id) REFERENCES senses(id));
+    text TEXT, offsets TEXT, sense_id INTEGER REFERENCES senses(id));
     """)
     return conn
 
@@ -60,7 +56,9 @@ def create_indexes_then_close(
     conn: sqlite3.Connection, lemma_lang: str, close: bool = True
 ) -> None:
     create_indexes_sql = """
-    CREATE INDEX idx_senses ON senses (lemma, pos, sound_id);
+    CREATE INDEX idx_senses ON senses (lemma, pos);
+    CREATE INDEX idx_senses_forms ON senses (form_group_id);
+    PRAGMA optimize;
     """
     conn.executescript(create_indexes_sql)
     if lemma_lang != "":

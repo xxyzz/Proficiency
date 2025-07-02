@@ -150,6 +150,7 @@ def create_klld_db(gloss_lang: str, lemma_lang: str) -> Path:
         """
         CREATE INDEX senses_synset_id_index ON senses(synset_id);
         CREATE INDEX senses_term_lemma_id_index ON senses(term_lemma_id);
+        PRAGMA optimize;
         """
     )
     klld_conn.commit()

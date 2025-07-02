@@ -600,15 +600,25 @@ def save_wsd_db(
         wsd_conn = sqlite3.connect(wsd_path)
         with wsd_conn:
             conn.backup(wsd_conn)
-            wsd_conn.execute("CREATE INDEX idx_examples ON examples (sense_id)")
+            wsd_conn.executescript(
+                """
+                CREATE INDEX idx_examples ON examples (sense_id);
+                PRAGMA optimize;
+                """
+            )
         wsd_conn.close()
         subprocess.run(
-            ["zstd", "-z", "-19", str(wsd_path)],
+            ["zstd", "-z", "-19", "-T0", str(wsd_path)],
             check=True,
             capture_output=True,
             text=True,
         )
 
-    conn.execute("DROP TABLE examples")
+    conn.executescript(
+        """
+        DROP TABLE examples;
+        VACUUM;
+        """
+    )
     conn.commit()
     conn.close()
