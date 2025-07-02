@@ -9,7 +9,7 @@ if __name__ == "__main__":
     gloss_lang = sys.argv[1]
     url = (
         "https://kaikki.org/dictionary/rawdata.html"
-        if gloss_lang == "en"
+        if gloss_lang in ["en", "he"]
         else f"https://kaikki.org/{gloss_lang}wiktionary/rawdata.html"
     )
     r = requests.get(url)
