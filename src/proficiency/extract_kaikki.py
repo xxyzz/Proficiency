@@ -15,6 +15,7 @@ from .util import (
     get_short_def,
     get_shortest_lemma_length,
     load_difficulty_data,
+    remove_colon,
     remove_full_stop,
 )
 
@@ -532,8 +533,8 @@ def get_senses(
             and any(cat.endswith(FILTER_EN_SINGLE_SENSE_CAT_SUFFIXES) for cat in cats)
         ):
             continue
-        elif len(glosses) > 1 and glosses[0] in first_glosses:
-            parent_sense = first_glosses[glosses[0]]
+        elif len(glosses) > 1 and remove_colon(glosses[0]) in first_glosses:
+            parent_sense = first_glosses[remove_colon(glosses[0])]
             short_example, e_with_offsets = get_examples(examples, gloss_lang)
             if short_example != "" and len(short_example) < len(
                 parent_sense.short_example
@@ -541,7 +542,7 @@ def get_senses(
                 parent_sense.short_example = short_example
             parent_sense.examples.extend(e_with_offsets)
             continue
-        gloss = glosses[0]
+        gloss = remove_colon(glosses[0])
         if remove_full_stop(gloss) == "":
             continue
         if gloss_lang == "en":

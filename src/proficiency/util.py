@@ -16,6 +16,10 @@ def remove_full_stop(text: str) -> str:
     return text.strip().rstrip(".。")
 
 
+def remove_colon(text: str) -> str:
+    return text.strip().rstrip(":：")
+
+
 def remove_parentheses(text: str) -> str:
     # supports nested parentheses
     left_bracket_count = 0
