@@ -594,9 +594,7 @@ def save_wsd_db(
     db_path: Path, conn: sqlite3.Connection, lemma_lang: str, gloss_lang: str
 ) -> None:
     if f"{lemma_lang}-{gloss_lang}" in WSD_LANGS:
-        split_stem = db_path.stem.rsplit("_", maxsplit=1)
-        new_stem = f"{split_stem[0]}_wsd_{split_stem[1]}"
-        wsd_path = db_path.with_stem(new_stem)
+        wsd_path = db_path.with_stem(db_path.stem + "_wsd")
         wsd_conn = sqlite3.connect(wsd_path)
         with wsd_conn:
             conn.backup(wsd_conn)
