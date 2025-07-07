@@ -114,6 +114,8 @@ def archive_files(
         tar_name = f"{lemma_code}_{gloss_code}"
         if is_zh_cn:
             tar_name += "_cn"
+        if path.stem.endswith("_wsd"):
+            tar_name += "_wsd"
         grouped_paths[tar_name].append(path)
     for tar_name, paths in grouped_paths.items():
         tar_path = Path(f"build/{tar_name}.tar.bz2")

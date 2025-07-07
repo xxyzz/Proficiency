@@ -19,6 +19,6 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          prerelease: ${{ endsWith(github.ref_name, 'dev') }}
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
           files: |
             **/*.bz2

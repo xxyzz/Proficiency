@@ -533,7 +533,7 @@ def get_senses(
             and any(cat.endswith(FILTER_EN_SINGLE_SENSE_CAT_SUFFIXES) for cat in cats)
         ):
             continue
-        elif len(glosses) > 1 and remove_colon(glosses[0]) in first_glosses:
+        elif remove_colon(glosses[0]) in first_glosses:
             parent_sense = first_glosses[remove_colon(glosses[0])]
             short_example, e_with_offsets = get_examples(examples, gloss_lang)
             if short_example != "" and len(short_example) < len(
