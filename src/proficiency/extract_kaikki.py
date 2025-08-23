@@ -183,6 +183,7 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                         for cat in data.get("categories", [])
                     )
                 )
+                or len(set(data.get("tags", [])).intersection(FILTER_SENSE_TAGS)) > 0
             ):
                 continue
             if last_word != word:
