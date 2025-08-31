@@ -175,6 +175,7 @@ def get_klld_filename(lemma_lang: str, gloss_lang: str) -> str:
 
 
 def main():
+    # create wsd files
     import sys
 
     from .main import archive_files

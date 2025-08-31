@@ -119,10 +119,13 @@ def archive_files(
         grouped_paths[tar_name].append(path)
     for tar_name, paths in grouped_paths.items():
         tar_path = Path(f"build/{tar_name}.tar.bz2")
+        tar_path.unlink(missing_ok=True)
         with tarfile.open(name=tar_path, mode="x:bz2") as tar_f:
             for path in paths:
                 tar_f.add(path, path.name)
-            if tar_name.startswith(("en_en", "en_zh")):
+            if tar_name.startswith(("en_en", "en_zh")) and not tar_name.endswith(
+                "_wsd"
+            ):
                 tar_f.add(kindle_db_path, kindle_db_path.name)
 
 
