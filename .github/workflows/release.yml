@@ -12,13 +12,24 @@ jobs:
   create_release:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - uses: dawidd6/action-download-artifact@v11
         with:
           workflow: build.yml
           commit: ${{ github.sha }}
+
+      - run: |
+          python -m pip install .
+          checksum build
 
       - uses: softprops/action-gh-release@v2
         with:
           prerelease: ${{ contains(github.ref_name, 'beta') }}
           files: |
             **/*.bz2
+            build/sha256.json

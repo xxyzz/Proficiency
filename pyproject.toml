@@ -23,6 +23,7 @@ dev = ["mypy", "ruff", "requests", "lxml", "types-requests"]
 [project.scripts]
 proficiency = "proficiency.main:main"
 create_klld = "proficiency.create_klld:main"
+checksum = "proficiency.checksum:main"
 
 [tool.mypy]
 check_untyped_defs = true
