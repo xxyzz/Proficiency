@@ -59,7 +59,7 @@ jobs:
         run: |
           echo "date=$(python kaikki.py ${{ matrix.gloss_lang }})" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: build/${{ matrix.gloss_lang }}.jsonl.gz
           key: ${{ matrix.gloss_lang }}-${{ steps.kaikki-date.outputs.date }}
@@ -70,14 +70,14 @@ jobs:
           PYTHONOPTIMIZE: 1
           PYTHONWARNINGS: default
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.gloss_lang }}
           if-no-files-found: error
           path: |
             **/*.bz2
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.gloss_lang }}-wsd
           path: |
