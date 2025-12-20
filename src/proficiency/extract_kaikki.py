@@ -31,7 +31,14 @@ FILTER_SENSE_TAGS = frozenset(
     }
 )
 FILTER_EN_FORM_TAGS = frozenset(
-    ["table-tags", "auxiliary", "class", "inflection-template", "obsolete"]
+    [
+        "table-tags",
+        "auxiliary",
+        "class",
+        "inflection-template",
+        "obsolete",
+        "classifier",  # th-noun template
+    ]
 )
 USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
 # tatuylonen/wiktextract#1263

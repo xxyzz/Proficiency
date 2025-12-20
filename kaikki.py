@@ -1,8 +1,9 @@
 import sys
 
 if __name__ == "__main__":
-    import requests
     from datetime import datetime
+
+    import requests
 
     gloss_lang = sys.argv[1]
     url = (
