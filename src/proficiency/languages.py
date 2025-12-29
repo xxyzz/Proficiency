@@ -136,15 +136,4 @@ KAIKKI_TRANSLATED_GLOSS_LANGS: dict[str, list[str]] = {
 
 WSD_LANGS = {
     "en-en",
-    "de-en",
-    "es-en",
-    "fr-en",
-    "zh-en",
-    "ja-en",
-    "ko-en",
-    "ru-en",
-    "fr-fr",
-    "en-fr",
-    "de-de",
-    "en-de",
 }

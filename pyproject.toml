@@ -8,7 +8,7 @@ version = "1.0.0"
 authors = [{ name = "xxyzz" }]
 description = "Create language files for WordDumb."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 license = { text = "GNU General Public License v3 or later (GPLv3+)" }
 dependencies = [
     "lemminflect",
