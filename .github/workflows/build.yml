@@ -21,7 +21,7 @@ jobs:
     env:
       GH_TELEMETRY: false
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
 
       - if: matrix.edition == 'en'
@@ -67,7 +67,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_TELEMETRY: false
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
       - run: |
           python -m pip install .
