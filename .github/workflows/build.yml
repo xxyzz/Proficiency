@@ -16,6 +16,7 @@ jobs:
     name: Create files
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 5
       matrix:
         gloss_lang:
           - 'de'
@@ -33,13 +34,14 @@ jobs:
           - 'th'
           - 'zh'
           - 'ko'
+          - 'id'
     env:
       GH_TELEMETRY: false
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
 
-      - if: matrix.edition == 'en'
+      - if: matrix.gloss_lang == 'en'
         run: gh release create ${{ github.ref_name }} -d
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -65,7 +67,7 @@ jobs:
           PYTHONOPTIMIZE: 1
           PYTHONWARNINGS: default
 
-      - run: gh release upload ${{ github.ref_name }} build/**/*.bz2
+      - run: gh release upload ${{ github.ref_name }} build/*.tar.bz2
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -82,5 +84,5 @@ jobs:
       - run: |
           python -m pip install .
           checksum ${{ github.ref_name }}
-      - run: gh upload ${{ github.ref_name }} build/sha256.json
+      - run: gh release upload ${{ github.ref_name }} build/sha256.json
       - run: gh release edit ${{ github.ref_name }} --draft=false --latest

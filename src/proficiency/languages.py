@@ -127,6 +127,7 @@ KAIKKI_GLOSS_LANGS = {
         "el",
     },
     "th": {"ja", "de", "en", "es", "it", "hi", "zh", "th", "fr", "fi"},
+    "id": {"id", "en"},
 }
 
 # key is translated word language code, value is source Wiktionary edition codes
