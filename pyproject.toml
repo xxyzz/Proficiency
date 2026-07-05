@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Proficiency"
-version = "1.0.0"
+version = "1.1.0"
 authors = [{ name = "xxyzz" }]
 description = "Create language files for WordDumb."
 readme = "README.md"
@@ -18,11 +18,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["mypy", "ruff", "requests", "lxml", "types-requests"]
+dev = ["mypy", "ruff", "requests", "types-requests"]
 
 [project.scripts]
 proficiency = "proficiency.main:main"
-create_klld = "proficiency.create_klld:main"
 checksum = "proficiency.checksum:main"
 
 [tool.mypy]
@@ -44,7 +43,6 @@ ignore_missing_imports = true
 [tool.typos]
 type.csv.check-file = false
 type.json.check-file = false
-default.extend-words = { "Formes" = "Formes" }
 
 [tool.ruff.lint]
 select = [

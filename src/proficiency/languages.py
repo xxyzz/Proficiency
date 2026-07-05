@@ -133,7 +133,3 @@ KAIKKI_GLOSS_LANGS = {
 KAIKKI_TRANSLATED_GLOSS_LANGS: dict[str, list[str]] = {
     "he": ["en"],  # English to Hebrew
 }
-
-WSD_LANGS = {
-    "en-en",
-}

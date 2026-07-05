@@ -114,8 +114,6 @@ def archive_files(
         tar_name = f"{lemma_code}_{gloss_code}"
         if is_zh_cn:
             tar_name += "_cn"
-        if path.stem.endswith("_wsd"):
-            tar_name += "_wsd"
         grouped_paths[tar_name].append(path)
     for tar_name, paths in grouped_paths.items():
         tar_path = Path(f"build/{tar_name}.tar.bz2")
@@ -123,11 +121,5 @@ def archive_files(
         with tarfile.open(name=tar_path, mode="x:bz2") as tar_f:
             for path in paths:
                 tar_f.add(path, path.name)
-            if tar_name.startswith(("en_en", "en_zh")) and not tar_name.endswith(
-                "_wsd"
-            ):
+            if tar_name.startswith(("en_en", "en_zh")):
                 tar_f.add(kindle_db_path, kindle_db_path.name)
-
-
-if __name__ == "__main__":
-    main()

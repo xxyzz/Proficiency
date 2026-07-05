@@ -45,16 +45,11 @@ def init_db(db_path: Path) -> sqlite3.Connection:
     sound_id INTEGER REFERENCES sounds(id),
     embed_vector TEXT DEFAULT '',
     form_group_id INTEGER REFERENCES form_groups(id));
-
-    CREATE TABLE examples (
-    text TEXT, offsets TEXT, sense_id INTEGER REFERENCES senses(id));
     """)
     return conn
 
 
-def create_indexes_then_close(
-    conn: sqlite3.Connection, lemma_lang: str, close: bool = True
-) -> None:
+def create_indexes_then_close(conn: sqlite3.Connection, lemma_lang: str) -> None:
     create_indexes_sql = """
     CREATE INDEX idx_senses ON senses (lemma, pos);
     CREATE INDEX idx_senses_forms ON senses (form_group_id);
@@ -65,5 +60,4 @@ def create_indexes_then_close(
         for (lemma_num,) in conn.execute("SELECT count(DISTINCT lemma) FROM senses"):
             print(f"{lemma_lang}: {lemma_num}")
     conn.commit()
-    if close:
-        conn.close()
+    conn.close()

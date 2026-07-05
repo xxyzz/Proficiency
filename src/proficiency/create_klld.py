@@ -172,17 +172,3 @@ def get_klld_filename(lemma_lang: str, gloss_lang: str) -> str:
     from .main import MAJOR_VERSION
 
     return f"kll.{lemma_lang}.{gloss_lang}_v{MAJOR_VERSION}.klld"
-
-
-def main():
-    # create wsd files
-    import sys
-
-    from .main import archive_files
-
-    wiktionary_path = Path(sys.argv[1])
-    _, lemma_lang, gloss_lang, _ = wiktionary_path.stem.split("_", maxsplit=3)
-    klld_path = wiktionary_path.with_name(get_klld_filename(lemma_lang, gloss_lang))
-    klld_path = klld_path.with_stem(klld_path.stem + "_wsd")
-    copy_data_from_wiktionary_db(klld_path, wiktionary_path, gloss_lang, lemma_lang)
-    archive_files([wiktionary_path, klld_path], Path())

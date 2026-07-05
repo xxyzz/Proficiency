@@ -17,7 +17,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        gloss_lang: ['de', 'el', 'en', 'es', 'fr', 'he', 'it', 'ja', 'nl', 'pl', 'pt', 'ru', 'th', 'zh', 'ko']
+        gloss_lang:
+          - 'de'
+          - 'el'
+          - 'en'
+          - 'es'
+          - 'fr'
+          - 'he'
+          - 'it'
+          - 'ja'
+          - 'nl'
+          - 'pl'
+          - 'pt'
+          - 'ru'
+          - 'th'
+          - 'zh'
+          - 'ko'
     env:
       GH_TELEMETRY: false
     steps:
@@ -51,11 +66,6 @@ jobs:
           PYTHONWARNINGS: default
 
       - run: gh release upload ${{ github.ref_name }} build/**/*.bz2
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - if: matrix.edition == 'en'
-        run: gh release upload ${{ github.ref_name }} build/**/*.zst
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -9,7 +9,7 @@ from shutil import which
 from typing import Any
 
 from .database import create_indexes_then_close, init_db, wiktionary_db_path
-from .languages import KAIKKI_TRANSLATED_GLOSS_LANGS, WSD_LANGS
+from .languages import KAIKKI_TRANSLATED_GLOSS_LANGS
 from .util import (
     freq_to_difficulty,
     get_short_def,
@@ -41,54 +41,6 @@ FILTER_EN_FORM_TAGS = frozenset(
     ]
 )
 USED_POS_TYPES = frozenset(["adj", "adv", "noun", "phrase", "proverb", "verb"])
-# tatuylonen/wiktextract#1263
-FILTER_EN_EXAMPLE_PREFIXES = (
-    "Active-voice counterpart:",
-    "Coordinate term:",
-    "Alternative forms:",
-    "Comeronyms:",
-    "Holonym:",
-    "Imperfective:",
-    "See synonyms at",
-    "Meronym:",
-    "Near-synonym:",
-    "Perfective:",
-    "Troponym:",
-)
-FILTER_EN_CAT_SUFFIXES = (" obsolete terms", " censored spellings")
-FILTER_EN_SINGLE_SENSE_CAT_SUFFIXES = (
-    ":Zoology",
-    ":Anthropology",
-    ":Entomology",
-    ":Ornithology",
-    ":Ichthyology",
-    ":Malacology",
-    ":Chemistry",
-    ":Chemical reactions",
-    ":Physical chemistry",
-    ":Pharmacology",
-    ":Pharmaceutical drugs",
-    ":Pharmaceutical effects",
-    ":Drugs",
-    ":Alkaloids",
-    ":Organic chemistry",
-    ":Organic compounds",
-    ":Carboxylic acids",
-    ":Carbohydrates",
-    ":Medicine",
-    ":Biochemistry",
-    ":Steroids",
-    ":Inorganic chemistry",
-    ":Anatomy",
-    ":Physiology",
-    ":Pathology",
-    ":Surgery",
-)
-REMOVE_EN_GLOSS_PREFIXES = (
-    "Synonym of ",
-    "Characterised or marked by ",
-    "Characterised by ",
-)
 
 
 @dataclass
@@ -183,13 +135,6 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                     gloss_lang in KAIKKI_TRANSLATED_GLOSS_LANGS
                     and len(data.get("translations", [])) == 0
                 )
-                or (
-                    gloss_lang == "en"
-                    and any(
-                        cat.endswith(FILTER_EN_CAT_SUFFIXES)
-                        for cat in data.get("categories", [])
-                    )
-                )
                 or len(set(data.get("tags", [])).intersection(FILTER_SENSE_TAGS)) > 0
             ):
                 continue
@@ -258,11 +203,9 @@ def create_lemmas_db_from_kaikki(lemma_lang: str, gloss_lang: str) -> list[Path]
                     )
                 last_word = word
 
-    create_indexes_then_close(conn, lemma_lang, close=False)
-    save_wsd_db(db_path, conn, lemma_lang, gloss_lang)
+    create_indexes_then_close(conn, lemma_lang)
     if gloss_lang == "zh":
-        create_indexes_then_close(zh_cn_conn, "", close=False)
-        save_wsd_db(zh_cn_db_path, zh_cn_conn, lemma_lang, gloss_lang)
+        create_indexes_then_close(zh_cn_conn, "")
     kaikki_json_path.unlink()
     return [db_path, zh_cn_db_path] if gloss_lang == "zh" else [db_path]
 
@@ -297,15 +240,14 @@ def insert_senses(
     sound_id: int | None,
     form_group_id: int | None,
 ) -> None:
-    for sense in senses:
-        for (sense_id,) in conn.execute(
-            """
-                INSERT INTO senses
-                (enabled, short_def, full_def, example, lemma, pos,
-                difficulty, sound_id, form_group_id)
-                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
-                RETURNING id
-                """,
+    conn.executemany(
+        """
+        INSERT INTO senses
+        (enabled, short_def, full_def, example, lemma, pos,
+        difficulty, sound_id, form_group_id)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
             (
                 sense.enabled,
                 sense.short_gloss,
@@ -316,18 +258,8 @@ def insert_senses(
                 difficulty,
                 sound_id,
                 form_group_id,
-            ),
-        ):
-            insert_examples(conn, sense, sense_id)
-
-
-def insert_examples(conn: sqlite3.Connection, sense: Sense, sense_id: int) -> None:
-    conn.executemany(
-        "INSERT INTO examples (sense_id, text, offsets) VALUES(?, ?, ?)",
-        (
-            (sense_id, example.text, example.offsets)
-            for example in sense.examples
-            if example.offsets != ""
+            )
+            for sense in senses
         ),
     )
 
@@ -528,18 +460,7 @@ def get_senses(
     for sense in word_data.get("senses", []):
         examples = sense.get("examples", [])
         glosses = sense.get("glosses", [])
-        cats = sense.get("categories", [])
         if len(glosses) == 0:
-            continue
-        elif gloss_lang == "en" and any(
-            cat.endswith(FILTER_EN_CAT_SUFFIXES) for cat in cats
-        ):
-            continue
-        elif (
-            gloss_lang == "en"
-            and len(word_data["senses"]) == 1
-            and any(cat.endswith(FILTER_EN_SINGLE_SENSE_CAT_SUFFIXES) for cat in cats)
-        ):
             continue
         elif remove_colon(glosses[0]) in first_glosses:
             parent_sense = first_glosses[remove_colon(glosses[0])]
@@ -553,9 +474,6 @@ def get_senses(
         gloss = remove_colon(glosses[0])
         if remove_full_stop(gloss) == "":
             continue
-        if gloss_lang == "en":
-            for prefix in REMOVE_EN_GLOSS_PREFIXES:
-                gloss = gloss.removeprefix(prefix).strip()
         tags = set(sense.get("tags", []))
         if len(tags.intersection(FILTER_SENSE_TAGS)) > 0:
             continue
@@ -581,11 +499,6 @@ def get_examples(examples: dict, gloss_lang: str) -> tuple[str, list[Example]]:
     e_with_offsets = []
     for example in examples:
         example_text = example.get("text", "")
-        # en Template:...
-        if example_text in ["", "[…"] or (
-            gloss_lang == "en" and example_text.startswith(FILTER_EN_EXAMPLE_PREFIXES)
-        ):
-            continue
         if short_example == "" or len(example_text) < len(short_example):
             short_example = example_text
         offsets = example.get(
@@ -597,35 +510,3 @@ def get_examples(examples: dict, gloss_lang: str) -> tuple[str, list[Example]]:
                 Example(text=example_text, offsets=json.dumps(offsets))
             )
     return short_example, e_with_offsets
-
-
-def save_wsd_db(
-    db_path: Path, conn: sqlite3.Connection, lemma_lang: str, gloss_lang: str
-) -> None:
-    if f"{lemma_lang}-{gloss_lang}" in WSD_LANGS:
-        wsd_path = db_path.with_stem(db_path.stem + "_wsd")
-        wsd_conn = sqlite3.connect(wsd_path)
-        with wsd_conn:
-            conn.backup(wsd_conn)
-            wsd_conn.executescript(
-                """
-                CREATE INDEX idx_examples ON examples (sense_id);
-                PRAGMA optimize;
-                """
-            )
-        wsd_conn.close()
-        subprocess.run(
-            ["zstd", "-z", "-19", "-T0", str(wsd_path)],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-    conn.executescript(
-        """
-        DROP TABLE examples;
-        VACUUM;
-        """
-    )
-    conn.commit()
-    conn.close()
