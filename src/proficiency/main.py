@@ -17,9 +17,13 @@ from .languages import (
     KAIKKI_LEMMA_LANGS,
     KAIKKI_TRANSLATED_GLOSS_LANGS,
 )
+from .wiki_titles import X_RAY_EDITIONS, create_wiki_db
 
 VERSION = version("proficiency")
 MAJOR_VERSION = VERSION.split(".")[0]
+
+logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def create_wiktionary_files_from_kaikki(
@@ -32,9 +36,6 @@ def create_wiktionary_files_from_kaikki(
 
 
 def main() -> None:
-    logging.basicConfig(
-        format="%(asctime)s %(levelname)s: %(message)s", level=logging.INFO
-    )
     gloss_languages = KAIKKI_GLOSS_LANGS.keys() | KAIKKI_TRANSLATED_GLOSS_LANGS.keys()
     parser = argparse.ArgumentParser()
     parser.add_argument("gloss_lang", choices=gloss_languages)
@@ -62,7 +63,7 @@ def main() -> None:
     with ProcessPoolExecutor(
         mp_context=multiprocessing.get_context("spawn")
     ) as executor:
-        logging.info("Creating Wiktionary files")
+        logger.info("Creating Wiktionary files")
         file_paths = []
         if args.gloss_lang in KAIKKI_GLOSS_LANGS | KAIKKI_TRANSLATED_GLOSS_LANGS.keys():
             if args.gloss_lang in KAIKKI_GLOSS_LANGS:
@@ -74,9 +75,9 @@ def main() -> None:
                 args.lemma_lang_codes,
             ):
                 file_paths.extend(db_paths)
-        logging.info("Wiktionary files created")
+        logger.info("Wiktionary files created")
 
-        logging.info("Creating Kindle files")
+        logger.info("Creating Kindle files")
         kindle_db_path = Path()
         if "en" in args.lemma_lang_codes and args.gloss_lang in ["en", "zh"]:
             kindle_db_path = Path(f"build/en/kindle_en_en_v{MAJOR_VERSION}.db")
@@ -96,7 +97,10 @@ def main() -> None:
             ):
                 file_paths.append(db_path)
             archive_files(file_paths, kindle_db_path, True)
-        logging.info("Kindle files created")
+        logger.info("Kindle files created")
+
+    if args.gloss_lang in X_RAY_EDITIONS:
+        create_wiki_db(args.gloss_lang)
 
 
 def archive_files(

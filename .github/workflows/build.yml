@@ -51,23 +51,13 @@ jobs:
           sudo apt install -y lbzip2
           python -m pip install .[dev]
 
-      - name: Get kaikki date
-        id: kaikki-date
-        run: |
-          echo "date=$(python kaikki.py ${{ matrix.gloss_lang }})" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache@v6
-        with:
-          path: build/${{ matrix.gloss_lang }}.jsonl.gz
-          key: ${{ matrix.gloss_lang }}-${{ steps.kaikki-date.outputs.date }}
-
       - name: Create files
         run: proficiency ${{ matrix.gloss_lang }}
         env:
           PYTHONOPTIMIZE: 1
           PYTHONWARNINGS: default
 
-      - run: gh release upload ${{ github.ref_name }} build/*.tar.bz2
+      - run: gh release upload ${{ github.ref_name }} build/*.bz2
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -1,5 +1,4 @@
 import json
-import logging
 from gzip import GzipFile
 from pathlib import Path
 from typing import IO
@@ -12,8 +11,9 @@ def split_kaikki_jsonl(
     Split extracted jsonl file created by wiktextract to each language file.
     """
     from .languages import KAIKKI_LEMMA_LANGS, KAIKKI_TRANSLATED_GLOSS_LANGS
+    from .main import logger
 
-    logging.info("Start splitting JSONL file")
+    logger.info("Start splitting JSONL file")
     if gloss_code in KAIKKI_TRANSLATED_GLOSS_LANGS:
         lemma_codes = {lemma_code}
         gloss_code = lemma_code
@@ -44,7 +44,7 @@ def split_kaikki_jsonl(
 
     for out_f in out_files.values():
         out_f.close()
-    logging.info("Split JSONL file completed")
+    logger.info("Split JSONL file completed")
 
 
 def convert_lang_code(code: str) -> str:
