@@ -35,11 +35,12 @@ jobs:
           - 'zh'
           - 'ko'
           - 'id'
+          - 'hi'
     env:
       GH_TELEMETRY: false
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
 
       - if: matrix.gloss_lang == 'en'
         run: gh release create ${{ github.ref_name }} -d
@@ -70,7 +71,7 @@ jobs:
       GH_TELEMETRY: false
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
       - run: |
           python -m pip install .
           checksum ${{ github.ref_name }}
