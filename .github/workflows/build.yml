@@ -50,6 +50,7 @@ jobs:
       - name: Install package
         run: |
           sudo apt install -y lbzip2
+          python -m pip install -U pip
           python -m pip install .[dev]
 
       - name: Create files
@@ -73,6 +74,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
       - run: |
+          python -m pip install -U pip
           python -m pip install .
           checksum ${{ github.ref_name }}
       - run: gh release upload ${{ github.ref_name }} build/sha256.json
