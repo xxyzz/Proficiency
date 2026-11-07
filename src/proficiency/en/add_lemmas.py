@@ -20,7 +20,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 if not Path(args.word_wise).is_file():
-    raise Exception(args.word_wise)
+    raise FileNotFoundError(args.word_wise)
 ww_klld_conn = sqlite3.connect(args.word_wise)
 ww_klld_lemmas = 0
 for (count,) in ww_klld_conn.execute("SELECT COUNT(*) FROM lemmas"):

@@ -345,7 +345,7 @@ LEMMINFLECT_POS_TAGS = {
 
 
 def czech_adjective_to_adverb(word: str) -> str | None:
-    if word.endswith("lý") or word.endswith("sý"):
+    if word.endswith(("lý", "sý")):
         return word[:-1] + "e"
     elif word.endswith("rý"):
         return word[:-2] + "ře"
@@ -355,7 +355,7 @@ def czech_adjective_to_adverb(word: str) -> str | None:
         return word[:-1] + "ě"
     elif word.endswith("chý"):
         return word[:-3] + "še"
-    elif word.endswith("cký") or word.endswith("ský"):
+    elif word.endswith(("cký", "ský")):
         return word[:-2] + "ky"
     elif word.endswith("hý"):
         return word[:-2] + "ze"
@@ -377,7 +377,7 @@ def get_czech_derived_adverb_forms(adj: str) -> set[str]:
             derived_base_forms.add("ne" + adverb)
         final_derived_forms: set[str] = set()
         for adv in derived_base_forms:  # Comparative and superlative forms
-            if adv.endswith("ě") or adv.endswith("e"):
+            if adv.endswith(("ě", "e")):
                 final_derived_forms.add(adv + "ji")
                 final_derived_forms.add("nej" + adv + "ji")
         final_derived_forms |= derived_base_forms

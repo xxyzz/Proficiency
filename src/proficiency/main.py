@@ -91,11 +91,14 @@ def main() -> None:
             no_zh_cn_paths.append(db_path)
         archive_files(no_zh_cn_paths, kindle_db_path)
         if args.gloss_lang == "zh":
-            for db_path in executor.map(
-                partial(create_klld_db, "zh_cn"),
-                args.lemma_lang_codes,
-            ):
-                file_paths.append(db_path)
+            file_paths.extend(
+                list(
+                    executor.map(
+                        partial(create_klld_db, "zh_cn"),
+                        args.lemma_lang_codes,
+                    )
+                )
+            )
             archive_files(file_paths, kindle_db_path, True)
         logger.info("Kindle files created")
 

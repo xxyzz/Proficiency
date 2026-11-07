@@ -142,7 +142,7 @@ def parse_page_props_sql(conn: Connection, input_path: Path):
         for line in f:
             if line.startswith("INSERT INTO "):
                 for row in parse_sql_line(line):
-                    page_id, propname, value, *_ = row
+                    page_id, propname, *_ = row
                     if propname == "disambiguation":
                         conn.execute("DELETE FROM pages WHERE id = ?", (page_id,))
     conn.commit()
